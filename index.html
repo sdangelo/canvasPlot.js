@@ -1,0 +1,160 @@
+<html>
+<head>
+  <title>canvasPlot.js example</title>
+  <style type="text/css">
+form  { display: table;      }
+p     { display: table-row;  }
+label { display: table-cell; }
+input { display: table-cell; }
+  </style>
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script type="text/javascript">
+var p;
+
+function init() {
+	var canvas = document.getElementById("canvas");
+	var ctx = canvas.getContext("2d");
+
+	p = Object.create(canvasPlot);
+	p.ctx = ctx;
+
+	p.area.width = canvas.width;
+	p.area.height = canvas.height;
+
+	p.frame.area = Object.create(p.area);
+	p.frame.area.x = 10;
+	p.frame.area.y = 10;
+	p.frame.area.width = canvas.width - 20;
+	p.frame.area.height = canvas.height - 20;
+
+	p.map = p.mapLinear;
+	p.draw();
+
+	var plotButton = document.getElementById("plotButton");
+	plotButton.addEventListener("click", doPlot);
+}
+
+function doPlot() {
+	var re = /\s+/;
+	var xrange = document.getElementById("xrange").value.trim().split(re);
+	var yrange = document.getElementById("yrange").value.trim().split(re);
+	var xtics = parseFloat(document.getElementById("xtics").value.trim());
+	var ytics = parseFloat(document.getElementById("ytics").value.trim());
+	var x = document.getElementById("x").value.trim().split(re);
+	var y = document.getElementById("y").value.trim().split(re);
+
+	if (xrange.length != 2) {
+		alert("Invalid x axis range!");
+		return;
+	}
+	xrange[0] = parseFloat(xrange[0]);
+	xrange[1] = parseFloat(xrange[1]);
+	if (!isFinite(xrange[0]) || !isFinite(xrange[1]) || xrange[0] >= xrange[1]) {
+		alert("Invalid x axis range!");
+		return;
+	}
+
+	if (yrange.length != 2) {
+		alert("Invalid y axis range!");
+		return;
+	}
+	yrange[0] = parseFloat(yrange[0]);
+	yrange[1] = parseFloat(yrange[1]);
+	if (!isFinite(yrange[0]) || !isFinite(yrange[1]) || yrange[0] >= yrange[1]) {
+		alert("Invalid y axis range!");
+		return;
+	}
+
+	if (xtics <= 0.0) {
+		alert("Invalid x tics value!");
+		return;
+	}
+
+	if (ytics <= 0.0) {
+		alert("Invalid y tics value!");
+		return;
+	}
+
+	if (x.length != y.length) {
+		alert("Number of x and y coordinates do no match!");
+		return;
+	}
+
+	for (var i = 0; i < x.length; i++) {
+		x[i] = parseFloat(x[i]);
+		y[i] = parseFloat(y[i]);
+	}
+
+	p.xrange = Object.create(p.range);
+	p.xrange.min = xrange[0];
+	p.xrange.max = xrange[1];
+	p.yrange = Object.create(p.range);
+	p.yrange.min = yrange[0];
+	p.yrange.max = yrange[1];
+
+	var xtic = Object.create(p.tic);
+	xtic.direction = p.direction.vertical;
+	var ytic = Object.create(p.tic);
+	ytic.direction = p.direction.horizontal;
+
+	p.grid.tics = [];
+	var v;
+	for (var i = 0, v = xrange[0] + xtics; v < xrange[1];
+	     i++, v += xtics) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].value = v;
+	}
+	for (v = yrange[0] + ytics; v < yrange[1];
+	     i++, v += ytics) {
+		p.grid.tics[i] = Object.create(ytic);
+		p.grid.tics[i].value = v;
+	}
+
+	p.curves = [];
+	p.curves[0] = Object.create(p.curve);
+	p.curves[0].samples = Object.create(p.samples);
+	p.curves[0].samples.x = x;
+	p.curves[0].samples.y = y;
+
+	p.draw();
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <form>
+    <p>
+      <label for="xrange">x axis range (min SPACE max)</label>
+      <input type="text" id="xrange" value="0.0 1.0" />
+    </p>
+    <p>
+      <label for="yrange">y axis range (min SPACE max)</label>
+      <input type="text" id="yrange" value="0.0 1.0" />
+    </p>
+    <p>
+      <label for="xtics">distance between x axis grid tics (value)</label>
+      <input type="text" id="xtics" value="0.25" />
+    </p>
+    <p>
+      <label for="ytics">distance between y axis grid tics (value)</label>
+      <input type="text" id="ytics" value="0.25" />
+    </p>
+    <p>
+      <label for="x">x values (value SPACE value SPACE ... value)</label>
+      <input type="text" id="x" value="0.0 0.5 1.0" />
+    </p>
+    <p>
+      <label for="y">y values (value SPACE value SPACE ... value)</label>
+      <input type="text" id="y" value="0.0 1.0 0.0" />
+    </p>
+    <p>
+      <div style="display: table-cell">
+        <input style="display: inline" type="reset" value="Reset" />
+        <input style="display: inline" type="button" value="Plot" id="plotButton" />
+      </div>
+    </p>
+  </form>
+</body>
+</html>
