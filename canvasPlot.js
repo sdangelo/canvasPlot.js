@@ -200,8 +200,8 @@ var canvasPlot = {
 				if (pathBegun) {
 					if (exPrev)
 						ctx.lineTo(xPrev, yPrev);
-					if (!ex || (ex && !ir
-						    && exPrev && !irPrev)) {
+					if (!ex || !exPrev
+					    || (!ir && !irPrev)) {
 						ctx.stroke();
 						pathBegun = false;
 					}
