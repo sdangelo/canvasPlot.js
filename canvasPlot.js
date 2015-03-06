@@ -191,8 +191,6 @@ var canvasPlot = {
 			var exPrev = false;
 			var irPrev = false;
 			var pathBegun = false;
-			p.x.push(NaN);
-			p.y.push(NaN);
 			for (var i = 0; i < p.x.length; i++) {
 				var x = p.x[i];
 				var y = p.y[i];
@@ -226,6 +224,12 @@ var canvasPlot = {
 				exPrev = ex;
 				irPrev = ir;
 			}
+			if (pathBegun) {
+				if (exPrev)
+					ctx.lineTo(xPrev, yPrev);
+				ctx.stroke();
+			} else if (irPrev)
+				drawPoint(xPrev, yPrev);
 
 			ctx.restore();
 		}
