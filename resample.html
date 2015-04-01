@@ -1,0 +1,205 @@
+<html>
+<head>
+  <title>canvasPlot.js linear resampler example</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script src="mapLinear.js" type="text/javascript"></script>
+  <script src="resampler.js" type="text/javascript"></script>
+  <script src="resamplerLinear.js" type="text/javascript"></script>
+  <script type="text/javascript">
+function init() {
+	var canvas = document.getElementById("canvas");
+	var form = document.getElementById("form");
+
+	var style = window.getComputedStyle(canvas);
+	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
+			 + parseFloat(style.getPropertyValue("margin-right"));
+	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
+			  + parseFloat(style.getPropertyValue("margin-bottom"));
+	style = window.getComputedStyle(form);
+	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
+	var oldWidth = 0;
+	var oldHeight = 0;
+
+	var p = Object.create(canvasPlot.plot);
+	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
+
+	p.frame.area.p.x = 0;
+	p.frame.area.p.y = 0;
+
+	p.map.area = p.frame.innerArea;
+	p.map.xRange.min = 0.0;
+	p.map.xRange.max = 1.0;
+	p.map.yRange.min = -1.0;
+	p.map.yRange.max = 1.0;
+
+	p.grid.tics = Array(18);
+	var xtic = Object.create(canvasPlot.tic);
+	xtic.direction = canvasPlot.direction.vertical;
+	var ytic = Object.create(canvasPlot.tic);
+	ytic.direction = canvasPlot.direction.horizontal;
+
+	var i = 0;
+	for (var v = 0.1; i < 9; i++, v += 0.1) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = -0.8; i < 18; i++, v += 0.2) {
+		p.grid.tics[i] = Object.create(ytic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+
+	var x_in = Array(100);
+	var y_in = Array(100);
+	var x_out = Array(100);
+	var y_out = Array(100);
+
+	var r = Object.create(canvasPlot.resamplerLinear);
+	r.init();
+
+	function x_fill(x, n, first) {
+		var k = 1.0 / (n - 1.0);
+		x[0] = first;
+		var i = 1;
+		for (; i < n; i++)
+			x[i] = x[i - 1] + k;
+		for (; i < x.length; i++)
+			x[i] = NaN;
+	}
+
+	function update_out(n_in, n_out, step) {
+		x_fill(x_out, n_out, -1.0 / (n_in - 1.0));
+
+		r.timeStepRatio = (n_in - 1.0) / (n_out - 1.0);
+		r.update();
+
+		var rw = {};
+		var i = 0;
+		for (var j = 0; i < n_in; ) {
+			r.process(y_in, y_out, i, j, step, y_out.length - j, rw);
+			i = rw.nextIn;
+			j = rw.nextOut;
+		}
+		for (; j < y_out.length; j++)
+			y_out[j] = NaN;
+	}
+
+	function update_in(n_in, n_out, step) {
+		x_fill(x_in, n_in, 0.0);
+
+		var pi4 = 4.0 * Math.PI;
+		var i = 0;
+		for (; i < n_in; i++)
+			y_in[i] = Math.sin(pi4 * x_in[i]);
+		for (; i < y_in.length; i++)
+			y_in[i] = NaN;
+
+		update_out(n_in, n_out, step);
+	}
+
+	p.curves = [];
+
+	var samples = Object.create(canvasPlot.samples);
+	samples.init(x_in, y_in);
+	p.curves[0] = Object.create(canvasPlot.curve);
+	p.curves[0].init(samples, null);
+
+	samples = Object.create(canvasPlot.samples);
+	samples.init(x_out, y_out);
+	p.curves[1] = Object.create(canvasPlot.curve);
+	p.curves[1].init(samples, null);
+	p.curves[1].lineStyle = "#ff0000";
+
+	var ctx = canvas.getContext("2d");
+
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		p.draw(ctx);
+	}
+
+	function setValElement(name) {
+		var elem = document.getElementById(name);
+		elem.valElement = document.getElementById(name + "_val");
+		if (elem.valElement.innerHTML != elem.value)
+			elem.valElement.innerHTML = elem.value;
+		return elem;
+	}
+	var n_in_elem = setValElement("n_in");
+	var n_out_elem = setValElement("n_out");
+	var step_elem = setValElement("step");
+
+	update_in(parseInt(n_in_elem.value), parseInt(n_out_elem.value),
+		  parseInt(step_elem.value));
+
+	function input() {
+		if (this.valElement.innerHTML == this.value)
+			return;
+		this.valElement.innerHTML = this.value;
+
+		var n_in = parseInt(n_in_elem.value);
+		var n_out = parseInt(n_out_elem.value);
+		var step = parseInt(step_elem.value);
+
+		if (this == n_in_elem)
+			update_in(n_in, n_out, step);
+		else
+			update_out(n_in, n_out, step);
+
+		p.update(false, false);
+		draw();
+	}
+	n_in_elem.addEventListener("input", input);
+	n_out_elem.addEventListener("input", input);
+	step_elem.addEventListener("input", input);
+
+	function resize() {
+		var r = canvas.parentNode.getBoundingClientRect();
+		if (r.width == oldWidth && r.height == oldHeight)
+			return;
+		oldWidth = r.width;
+		oldHeight = r.height;
+
+		var xHeight = leaveHeight + parseFloat(style.getPropertyValue("height"));
+
+		canvas.width = r.width - leaveWidth;
+		canvas.height = r.height - xHeight;
+
+		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
+		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+
+		p.frame.area.width = canvas.width;
+		p.frame.area.height = canvas.height;
+
+		p.update(true, true);
+
+		draw();
+	}
+	resize();
+	window.addEventListener("resize", resize);
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <form id="form">
+    <div>
+      <label for="n_in">input samples: </label>
+      <input type="range" id="n_in" min="2" max="100" step="1" value="100" />
+      <span id="n_in_val">100</span>
+    </div>
+    <div>
+      <label for="n_out">output samples: </label>
+      <input type="range" id="n_out" min="2" max="100" step="1" value="100" />
+      <span id="n_out_val">100</span>
+    </div>
+    <div>
+      <label for="step">resampling step: </label>
+      <input type="range" id="step" min="1" max="100" step="1" value="100" />
+      <span id="step_val">100</span>
+    </div>
+  </form>
+</html>
