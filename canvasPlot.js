@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -210,6 +210,7 @@ var canvasPlot = {
 			ctx.strokeStyle = this.lineStyle;
 			ctx.lineCap = "square";
 
+			ctx.beginPath();
 			ctx.rect(map.area.p.x, map.area.p.y,
 				 map.area.width, map.area.height);
 			ctx.clip();
@@ -268,7 +269,7 @@ var canvasPlot = {
 			} else if (!samples && mSamples) {
 				this.samples.init(Array(this.mSamples.x.length),
 					Array(this.mSamples.y.length));
-			} else {
+			} else if (!samples && !mSamples) {
 				this.samples.init(null, null);
 				this.mSamples.init(null, null);
 			}
@@ -292,6 +293,7 @@ var canvasPlot = {
 			ctx.fillStyle = this.lineStyle;
 			ctx.lineJoin = "round";
 
+			ctx.beginPath();
 			ctx.rect(map.area.p.x, map.area.p.y,
 				 map.area.width, map.area.height);
 			ctx.clip();
@@ -301,7 +303,8 @@ var canvasPlot = {
 			var exPrev = false;
 			var irPrev = false;
 			var pathBegun = false;
-			for (var i = first; i < count; i++) {
+			var last = first + count;
+			for (var i = first; i < last; i++) {
 				var x = this.mSamples.x[i];
 				var y = this.mSamples.y[i];
 				var ex = isFinite(x) && isFinite(y);
@@ -310,24 +313,18 @@ var canvasPlot = {
 				if (pathBegun) {
 					if (exPrev)
 						ctx.lineTo(xPrev, yPrev);
-					if (!ex || !exPrev
-					    || (!ir && !irPrev)) {
+					if (!ex || !exPrev) {
 						ctx.stroke();
 						pathBegun = false;
 					}
-				} else if (irPrev) {
-					if (ex) {
+				} else if (ex) {
+					if (exPrev) {
 						ctx.beginPath();
 						ctx.moveTo(xPrev, yPrev);
 						pathBegun = true;
-					} else
-						this.drawPoint(ctx,
-							       xPrev, yPrev);
-				} else if (exPrev && ir) {
-					ctx.beginPath();
-					ctx.moveTo(xPrev, yPrev);
-					pathBegun = true;
-				}
+					}
+				} else if (irPrev)
+					this.drawPoint(ctx, xPrev, yPrev);
 
 				xPrev = x;
 				yPrev = y;
@@ -386,14 +383,18 @@ var canvasPlot = {
 			this.curves = curves ? curves : [];
 		},
 
-		update: function () {
+		update: function (updateFrameArea, updateMap) {
+			if (updateFrameArea)
+				this.frame.area.update();
+			if (this.frame)
+				this.frame.update();
+			if (updateMap)
+				this.map.update();
 			if (this.grid)
 				this.grid.update(this.map);
 			if (this.curves)
 				for (var i = 0; i < this.curves.length; i++)
 					this.curves[i].update(this.map);
-			if (this.frame)
-				this.frame.update();
 		},
 
 		draw: function (ctx) {

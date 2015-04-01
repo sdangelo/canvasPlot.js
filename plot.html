@@ -1,212 +1,172 @@
 <html>
 <head>
   <title>canvasPlot.js example</title>
-  <style type="text/css">
-* {
-	margin:			0;
-	padding:		0;
-}
-
-html {
-	height:			100%;
-}
-
-body {
-	height:			100%;
-	background-color:	#ddd;
-}
-
-canvas {
-	background-color:	white;
-	margin:			5px;
-}
-
-form {
-	margin:			0 auto;
-	display:		table;
-	border-spacing:		7px 2px;
-}
-
-form div {
-	display:		table-row;
-}
-
-form span, form label, form input {
-	display:		table-cell;
-}
-  </style>
+  <link rel="stylesheet" type="text/css" href="style.css">
   <script src="canvasPlot.js" type="text/javascript"></script>
   <script src="mapLinear.js" type="text/javascript"></script>
   <script type="text/javascript">
-var oldWidth;
-var oldHeight;
-var p;
-var canvas;
-var form;
-var ctx;
-var leaveWidth;
-var leaveHeight;
-
 function init() {
-	canvas = document.getElementById("canvas");
-	form = document.getElementById("form");
+	var canvas = document.getElementById("canvas");
+	var form = document.getElementById("form");
 
 	var style = window.getComputedStyle(canvas);
-	leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
-		     + parseFloat(style.getPropertyValue("margin-right"));
-	leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
-		      + parseFloat(style.getPropertyValue("margin-bottom"))
+	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
+			 + parseFloat(style.getPropertyValue("margin-right"));
+	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
+			  + parseFloat(style.getPropertyValue("margin-bottom"));
 	style = window.getComputedStyle(form);
 	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
+	var oldWidth = 0;
+	var oldHeight = 0;
 
-	ctx = canvas.getContext("2d");
-
-	p = Object.create(canvasPlot.plot);
-	p.init(Object.create(mapLinear), null, null, null);
+	var p = Object.create(canvasPlot.plot);
+	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
 
 	p.frame.area.p.x = 0;
 	p.frame.area.p.y = 0;
 
 	p.map.area = p.frame.innerArea;
 
-	oldWidth = 0;
-	oldHeight = 0;
-	resize();
+	var ctx = canvas.getContext("2d");
 
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		p.draw(ctx);
+	}
+
+	function resize() {
+		var r = canvas.parentNode.getBoundingClientRect();
+		if (r.width == oldWidth && r.height == oldHeight)
+			return;
+		oldWidth = r.width;
+		oldHeight = r.height;
+
+		var xHeight = leaveHeight + parseFloat(style.getPropertyValue("height"));
+
+		canvas.width = r.width - leaveWidth;
+		canvas.height = r.height - xHeight;
+
+		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
+		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+
+		p.frame.area.width = canvas.width;
+		p.frame.area.height = canvas.height;
+
+		p.update(true, true);
+
+		draw();
+	}
+	resize();
 	window.addEventListener("resize", resize);
 
+	var xrange_min_elem = document.getElementById("xrange_min");
+	var xrange_max_elem = document.getElementById("xrange_max");
+	var yrange_min_elem = document.getElementById("yrange_min");
+	var yrange_max_elem = document.getElementById("yrange_max");
+	var xtics_elem = document.getElementById("xtics");
+	var ytics_elem = document.getElementById("ytics");
+	var x_elem = document.getElementById("x");
+	var y_elem = document.getElementById("y");
+	function plot() {
+		var xrange_min = parseFloat(xrange_min_elem.value);
+		if (!isFinite(xrange_min)) {
+			alert("Invalid x range minimum value!");
+			return;
+		}
+
+		var xrange_max = parseFloat(xrange_max_elem.value);
+		if (!isFinite(xrange_max)) {
+			alert("Invalid x range maximum value!");
+			return;
+		}
+		if (xrange_max < xrange_min) {
+			alert("x range maximum must be bigger than minimum!");
+			return;
+		}
+
+		var yrange_min = parseFloat(yrange_min_elem.value);
+		if (!isFinite(yrange_min)) {
+			alert("Invalid y range minimum value!");
+			return;
+		}
+
+		var yrange_max = parseFloat(yrange_max_elem.value);
+		if (!isFinite(yrange_max)) {
+			alert("Invalid y range maximum value!");
+			return;
+		}
+		if (yrange_max < yrange_min) {
+			alert("y range maximum must be bigger than minimum!");
+			return;
+		}
+
+		var xtics = parseFloat(xtics_elem.value);
+		if (xtics <= 0.0) {
+			alert("x grid tics spacing must be a strictly positive "
+			      + "value!");
+			return;
+		}
+
+		var ytics = parseFloat(ytics_elem.value);
+		if (ytics <= 0.0) {
+			alert("y grid tics spacing must be a strictly positive "
+			      + "value!");
+			return;
+		}
+
+		var re = /\s+/;
+		var x = x_elem.value.trim().split(re);
+		var y = y_elem.value.trim().split(re);
+
+		if (x.length != y.length) {
+			alert("Numbers of x and y coordinates do no match!");
+			return;
+		}
+
+		for (var i = 0; i < x.length; i++) {
+			x[i] = parseFloat(x[i]);
+			y[i] = parseFloat(y[i]);
+		}
+
+		p.map.xRange.min = xrange_min;
+		p.map.xRange.max = xrange_max;
+		p.map.yRange.min = yrange_min;
+		p.map.yRange.max = yrange_max;
+
+		p.grid.tics = [];
+
+		var xtic = Object.create(canvasPlot.tic);
+		xtic.direction = canvasPlot.direction.vertical;
+		var ytic = Object.create(canvasPlot.tic);
+		ytic.direction = canvasPlot.direction.horizontal;
+
+		var i, v;
+		for (i = 0, v = xrange_min + xtics; v < xrange_max;
+		     i++, v += xtics) {
+			p.grid.tics[i] = Object.create(xtic);
+			p.grid.tics[i].init();
+			p.grid.tics[i].value = v;
+		}
+		for (v = yrange_min + ytics; v < yrange_max;
+		     i++, v += ytics) {
+			p.grid.tics[i] = Object.create(ytic);
+			p.grid.tics[i].init();
+			p.grid.tics[i].value = v;
+		}
+
+		var samples = Object.create(canvasPlot.samples);
+		samples.init(x, y);
+
+		p.curves = [];
+		p.curves[0] = Object.create(canvasPlot.curve);
+		p.curves[0].init(samples, null);
+
+		p.update(false, true);
+
+		draw();
+	}
 	var plotButton = document.getElementById("plot");
 	plotButton.addEventListener("click", plot);
-}
-
-function resize() {
-	var r = canvas.parentNode.getBoundingClientRect();
-	if (r.width == oldWidth && r.height == oldHeight)
-		return;
-	oldWidth = r.width;
-	oldHeight = r.height;
-
-	var style = window.getComputedStyle(form);
-	var xHeight = parseFloat(style.getPropertyValue("height"));
-
-	canvas.width = r.width - leaveWidth;
-	canvas.height = r.height - (leaveHeight + xHeight);
-
-	p.frame.area.width = canvas.width;
-	p.frame.area.height = canvas.height;
-	p.frame.area.update();
-	p.frame.update();
-	p.map.update();
-
-	p.grid.update(p.map);
-	if (p.curves[0])
-		p.curves[0].update(p.map);
-
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	p.draw(ctx);
-}
-
-function plot() {
-var xrange_min = parseFloat(document.getElementById("xrange_min")
-					    .value);
-	if (!isFinite(xrange_min)) {
-		alert("Invalid x range minimum value!");
-		return;
-	}
-
-	var xrange_max = parseFloat(document.getElementById("xrange_max")
-					    .value);
-	if (!isFinite(xrange_max)) {
-		alert("Invalid x range maximum value!");
-		return;
-	}
-	if (xrange_max < xrange_min) {
-		alert("x range maximum must be bigger than minimum!");
-		return;
-	}
-
-	var yrange_min = parseFloat(document.getElementById("yrange_min")
-					    .value);
-	if (!isFinite(yrange_min)) {
-		alert("Invalid y range minimum value!");
-		return;
-	}
-
-	var yrange_max = parseFloat(document.getElementById("yrange_max")
-					    .value);
-	if (!isFinite(yrange_max)) {
-		alert("Invalid y range maximum value!");
-		return;
-	}
-	if (yrange_max < yrange_min) {
-		alert("y range maximum must be bigger than minimum!");
-		return;
-	}
-
-	var xtics = parseFloat(document.getElementById("xtics").value);
-	if (xtics <= 0.0) {
-		alert("x grid tics spacing must be a strictly positive value!");
-		return;
-	}
-
-	var ytics = parseFloat(document.getElementById("ytics").value);
-	if (ytics <= 0.0) {
-		alert("y grid tics spacing must be a strictly positive value!");
-		return;
-	}
-
-	var re = /\s+/;
-	var x = document.getElementById("x").value.trim().split(re);
-	var y = document.getElementById("y").value.trim().split(re);
-
-	if (x.length != y.length) {
-		alert("Numbers of x and y coordinates do no match!");
-		return;
-	}
-
-	for (var i = 0; i < x.length; i++) {
-		x[i] = parseFloat(x[i]);
-		y[i] = parseFloat(y[i]);
-	}
-
-	p.map.xRange.min = xrange_min;
-	p.map.xRange.max = xrange_max;
-	p.map.yRange.min = yrange_min;
-	p.map.yRange.max = yrange_max;
-	p.map.update();
-
-	p.grid.tics = [];
-
-	var xtic = Object.create(canvasPlot.tic);
-	xtic.direction = canvasPlot.direction.vertical;
-	var ytic = Object.create(canvasPlot.tic);
-	ytic.direction = canvasPlot.direction.horizontal;
-
-	var v;
-	for (var i = 0, v = xrange_min + xtics; v < xrange_max;
-	     i++, v += xtics) {
-		p.grid.tics[i] = Object.create(xtic);
-		p.grid.tics[i].init();
-		p.grid.tics[i].value = v;
-	}
-	for (v = yrange_min + ytics; v < yrange_max;
-	     i++, v += ytics) {
-		p.grid.tics[i] = Object.create(ytic);
-		p.grid.tics[i].init();
-		p.grid.tics[i].value = v;
-	}
-
-	var samples = Object.create(canvasPlot.samples);
-	samples.init(x, y);
-
-	p.curves = [];
-	p.curves[0] = Object.create(canvasPlot.curve);
-	p.curves[0].init(samples, null);
-
-	p.update();
-
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	p.draw(ctx);
 }
 
 window.addEventListener("load", init);
