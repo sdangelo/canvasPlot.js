@@ -58,33 +58,23 @@ var canvasPlot = {
 		},
 
 		contains: function (x, y) {
-			return x >= this.p.x && x <= this.p2.x
-			       && y >= this.p.y && y <= this.p2.y;
+			return x >= this.p.x && x < this.p2.x
+			       && y >= this.p.y && y < this.p2.y;
 		}
 	},
 
 	map: {
-		area:		null,
 		xRange:		null,
 		yRange:		null,
 
-		tmpPoint:	null,
-
-		init: function (area, xRange, yRange) {
-			if (area)
-				this.area = area;
-			else {
-				this.area = Object.create(this.area);
-				this.area.init(null);
-			}
+		init: function (xRange, yRange) {
 			this.xRange = xRange ? xRange
 					     : Object.create(this.xRange);
 			this.yRange = yRange ? yRange
 					     : Object.create(this.yRange);
-			this.tmpPoint = Object.create(this.area.p);
 		},
 
-		update: function () {
+		update: function (area) {
 		},
 
 		mapPoint: function (x, y, m) {
@@ -95,10 +85,8 @@ var canvasPlot = {
 		mapPoints: function (x, y, mx, my, xFirst, yFirst,
 				     mxFirst, myFirst, count) {
 			for (var i = 0; i < count; i++) {
-				this.mapPoint(x[xFirst + i], y[yFirst + i],
-					      this.tmpPoint);
-				mx[mxFirst + i] = this.tmpPoint.x;
-				my[myFirst + i] = this.tmpPoint.y;
+				mx[mxFirst + i] = NaN;
+				my[myFirst + i] = NaN;
 			}
 		}
 	},
@@ -175,32 +163,32 @@ var canvasPlot = {
 		},
 
 		update: function (map) {
-			if (this.direction == 1  /* direction.horizontal */) {
-				if (this.value < map.yRange.min
-				    || this.value > map.yRange.max) {
+			if (this.direction == 1 /* direction.horizontal */) {
+				if (this.value >= map.yRange.min
+				    && this.value <= map.yRange.max) {
+					map.mapPoint(map.xRange.min, this.value,
+						     this.p1);
+					map.mapPoint(map.xRange.max, this.value,
+						     this.p2);
+					this.toDraw = true;
+				} else
 					this.toDraw = false;
-					return;
-				}
-				map.mapPoint(map.xRange.min, this.value,
-					     this.p1);
-				map.mapPoint(map.xRange.max, this.value,
-					     this.p2);
-				this.toDraw = true;
-			} else /* direction.vertical */ {
-				if (this.value < map.xRange.min
-				    || this.value > map.xRange.max) {
+			} else if (this.direction == 2 /* direction.vertical */)
+			{
+				if (this.value >= map.xRange.min
+				    && this.value <= map.xRange.max) {
+					map.mapPoint(this.value, map.yRange.min,
+						     this.p1);
+					map.mapPoint(this.value, map.yRange.max,
+						     this.p2);
+					this.toDraw = true;
+				} else
 					this.toDraw = false;
-					return;
-				}
-				map.mapPoint(this.value, map.yRange.min,
-					     this.p1);
-				map.mapPoint(this.value, map.yRange.max,
-					     this.p2);
-				this.toDraw = true;
-			}
+			} else
+				this.toDraw = false;
 		},
 
-		draw: function (ctx, map) {
+		draw: function (ctx, area) {
 			if (!this.toDraw)
 				return;
 
@@ -211,8 +199,7 @@ var canvasPlot = {
 			ctx.lineCap = "square";
 
 			ctx.beginPath();
-			ctx.rect(map.area.p.x, map.area.p.y,
-				 map.area.width, map.area.height);
+			ctx.rect(area.p.x, area.p.y, area.width, area.height);
 			ctx.clip();
 
 			ctx.beginPath();
@@ -228,12 +215,7 @@ var canvasPlot = {
 		tics:	null,
 
 		init: function (tics) {
-			if (tics) {
-				this.tics = tics;
-				for (var i = 0; i < this.tics.length; i++)
-					this.tics[i].init();
-			} else
-				this.tics = [];
+			this.tics = tics ? tics : [];
 		},
 
 		update: function (map) {
@@ -241,10 +223,22 @@ var canvasPlot = {
 				this.tics[i].update(map);
 		},
 
-		draw: function (ctx, map) {
+		draw: function (ctx, area) {
 			for (var i = 0; i < this.tics.length; i++)
-				this.tics[i].draw(ctx, map);
+				this.tics[i].draw(ctx, area);
 		},
+	},
+
+	curveDrawer: {
+		drawBegin: function (ctx, area, lineWidth, lineStyle,
+				     pointRadius) {
+		},
+
+		drawPart: function (mSamples, first, last) {
+		},
+
+		drawEnd: function () {
+		}
 	},
 
 	curve: {
@@ -255,8 +249,6 @@ var canvasPlot = {
 		lineStyle:	"#0f0",
 
 		pointRadius:	4,
-
-		eAngle:		Math.PI + Math.PI,
 
 		init: function (samples, mSamples) {
 			this.samples = samples ? samples
@@ -285,126 +277,16 @@ var canvasPlot = {
 			this.updatePart(map, 0, this.samples.x.length);
 		},
 
-		drawPart: function (ctx, map, first, count) {
-			ctx.save();
-
-			ctx.lineWidth = this.lineWidth;
-			ctx.strokeStyle = this.lineStyle;
-			ctx.fillStyle = this.lineStyle;
-			ctx.lineJoin = "round";
-
-			ctx.beginPath();
-			ctx.rect(map.area.p.x, map.area.p.y,
-				 map.area.width, map.area.height);
-			ctx.clip();
-
-			var xPrev = NaN;
-			var yPrev = NaN;
-			var exPrev = false;
-			var irPrev = false;
-			var pathBegun = false;
-			var last = first + count;
-			for (var i = first; i < last; i++) {
-				var x = this.mSamples.x[i];
-				var y = this.mSamples.y[i];
-				var ex = isFinite(x) && isFinite(y);
-				var ir = map.area.contains(x, y);
-
-				if (pathBegun) {
-					if (exPrev)
-						ctx.lineTo(xPrev, yPrev);
-					if (!ex || !exPrev) {
-						ctx.stroke();
-						pathBegun = false;
-					}
-				} else if (ex) {
-					if (exPrev) {
-						ctx.beginPath();
-						ctx.moveTo(xPrev, yPrev);
-						pathBegun = true;
-					}
-				} else if (irPrev)
-					this.drawPoint(ctx, xPrev, yPrev);
-
-				xPrev = x;
-				yPrev = y;
-				exPrev = ex;
-				irPrev = ir;
-			}
-			if (pathBegun) {
-				if (exPrev)
-					ctx.lineTo(xPrev, yPrev);
-				ctx.stroke();
-			} else if (irPrev)
-				this.drawPoint(ctx, xPrev, yPrev);
-
-			ctx.restore();
+		drawPart: function (ctx, area, curveDrawer, first, last) {
+			curveDrawer.drawBegin(ctx, area, this.lineWidth,
+					      this.lineStyle, this.pointRadius);
+			curveDrawer.drawPart(this.mSamples, first, last);
+			curveDrawer.drawEnd();
 		},
 
-		draw: function (ctx, map) {
-			this.drawPart(ctx, map, 0, this.samples.x.length);
-		},
-
-		drawPoint: function (ctx, x, y) {
-			ctx.beginPath();
-			ctx.arc(x, y, this.pointRadius, 0.0, this.eAngle);
-			ctx.fill();
-		}
-	},
-
-	plot: {
-		map:	null,
-		frame:	null,
-		grid:	null,
-		curves:	null,
-
-		init: function (map, frame, grid, curves) {
-			if (frame)
-				this.frame = frame;
-			else {
-				this.frame = Object.create(this.frame);
-				this.frame.init(null);
-			}
-
-			if (map)
-				this.map = map;
-			else {
-				this.map = Object.create(this.map);
-				this.map.init(this.frame.innerArea, null, null);
-			}
-
-			if (grid)
-				this.grid = grid;
-			else {
-				this.grid = Object.create(this.grid);
-				this.grid.init(null);
-			}
-
-			this.curves = curves ? curves : [];
-		},
-
-		update: function (updateFrameArea, updateMap) {
-			if (updateFrameArea)
-				this.frame.area.update();
-			if (this.frame)
-				this.frame.update();
-			if (updateMap)
-				this.map.update();
-			if (this.grid)
-				this.grid.update(this.map);
-			if (this.curves)
-				for (var i = 0; i < this.curves.length; i++)
-					this.curves[i].update(this.map);
-		},
-
-		draw: function (ctx) {
-			if (this.grid)
-				this.grid.draw(ctx, this.map);
-			if (this.curves)
-				for (var i = 0; i < this.curves.length; i++)
-					this.curves[i].draw(ctx, this.map);
-			if (this.frame)
-				this.frame.draw(ctx);
+		draw: function (ctx, area, curveDrawer) {
+			this.drawPart(ctx, area, curveDrawer,
+				      0, this.samples.x.length);
 		}
 	}
 };
@@ -426,7 +308,3 @@ canvasPlot.frame.innerArea = Object.create(canvasPlot.area);
 
 canvasPlot.curve.samples = Object.create(canvasPlot.samples);
 canvasPlot.curve.mSamples = Object.create(canvasPlot.samples);
-
-canvasPlot.plot.map = Object.create(canvasPlot.map);
-canvasPlot.plot.frame = Object.create(canvasPlot.frame);
-canvasPlot.plot.grid = Object.create(canvasPlot.grid);

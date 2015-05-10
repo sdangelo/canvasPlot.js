@@ -39,14 +39,16 @@ canvasPlot.resamplerLinear.process = function (yIn, yOut, firstIn, firstOut,
 	var i = firstIn + this.offset;
 	var il = Math.floor(i);
 	var il1 = il - 1;
+	d = yIn[il] - yIn[il1];
 	for (; i < lastIn && j < lastOut; i += this.timeStepRatio, j++) {
 		var ix = i - il;
 		if (ix >= 1.0) {
 			il = Math.floor(i);
 			il1 = il - 1;
 			ix = i - il;
+			d = yIn[il] - yIn[il1];
 		}
-		yOut[j] = yIn[il1] + ix * (yIn[il] - yIn[il1]);
+		yOut[j] = yIn[il1] + ix * d;
 	}
 
 	rw.nextOut = j;

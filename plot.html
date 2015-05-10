@@ -4,6 +4,8 @@
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="canvasPlot.js" type="text/javascript"></script>
   <script src="mapLinear.js" type="text/javascript"></script>
+  <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <script src="simplePlot.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var canvas = document.getElementById("canvas");
@@ -19,19 +21,19 @@ function init() {
 	var oldWidth = 0;
 	var oldHeight = 0;
 
-	var p = Object.create(canvasPlot.plot);
+	var p = Object.create(canvasPlot.simplePlot);
 	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
 
 	p.frame.area.p.x = 0;
 	p.frame.area.p.y = 0;
 
-	p.map.area = p.frame.innerArea;
+	var drawer = Object.create(canvasPlot.curveDrawerLinear);
 
 	var ctx = canvas.getContext("2d");
 
 	function draw() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		p.draw(ctx);
+		p.draw(ctx, drawer);
 	}
 
 	function resize() {
@@ -132,8 +134,6 @@ function init() {
 		p.map.xRange.max = xrange_max;
 		p.map.yRange.min = yrange_min;
 		p.map.yRange.max = yrange_max;
-
-		p.grid.tics = [];
 
 		var xtic = Object.create(canvasPlot.tic);
 		xtic.direction = canvasPlot.direction.vertical;
