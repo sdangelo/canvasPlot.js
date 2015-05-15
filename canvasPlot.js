@@ -286,7 +286,7 @@ var canvasPlot = {
 
 		draw: function (ctx, area, curveDrawer) {
 			this.drawPart(ctx, area, curveDrawer,
-				      0, this.samples.x.length);
+				      0, this.samples.x.length - 1);
 		}
 	}
 };

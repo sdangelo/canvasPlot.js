@@ -73,7 +73,7 @@ function init() {
 	function update_out(n_in, n_out, step) {
 		x_fill(x_out, n_out, -1.0 / (n_in - 1.0));
 
-		r.timeStepRatio = (n_in - 1.0) / (n_out - 1.0);
+		r.stepRatio = (n_in - 1.0) / (n_out - 1.0);
 		r.update();
 
 		var rw = {};
@@ -164,7 +164,8 @@ function init() {
 		oldWidth = r.width;
 		oldHeight = r.height;
 
-		var xHeight = leaveHeight + parseFloat(style.getPropertyValue("height"));
+		var xHeight = leaveHeight
+			      + parseFloat(style.getPropertyValue("height"));
 
 		canvas.width = r.width - leaveWidth;
 		canvas.height = r.height - xHeight;

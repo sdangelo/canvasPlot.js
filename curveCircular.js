@@ -14,18 +14,23 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-canvasPlot.resampler = {
-	stepRatio:	NaN,
+canvasPlot.curveDrawer.drawPartCircular = function (mSamples, first, last) {
+	if (first > last) {
+		this.drawPart(mSamples, first, mSamples.x.length - 1);
+		this.drawPart(mSamples, 0, last);
+	} else
+{
+		this.drawPart(mSamples, first, last);
+console.log("yeah");
+}
+};
 
-	init: function () {
-	},
+canvasPlot.curveCircular = Object.create(canvasPlot.curve);
 
-	update: function () {
-	},
-
-	process: function (yIn, yOut, firstIn, firstOut, countIn, countOut,
-			   rw) {
-		rw.nextIn = firstIn;
-		rw.nextOut = firstOut;
-	}
+canvasPlot.curveCircular.drawPart = function (ctx, area, curveDrawer,
+					      first, last) {
+		curveDrawer.drawBegin(ctx, area, this.lineWidth, this.lineStyle,
+				      this.pointRadius);
+		curveDrawer.drawPartCircular(this.mSamples, first, last);
+		curveDrawer.drawEnd();
 };

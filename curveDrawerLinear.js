@@ -51,7 +51,7 @@ canvasPlot.curveDrawerLinear.drawBegin = function (ctx, area, lineWidth,
 };
 
 canvasPlot.curveDrawerLinear.drawPart = function (mSamples, first, last) {
-	for (var i = first; i < last; i++) {
+	for (var i = first; i <= last; i++) {
 		var x = mSamples.x[i];
 		var y = mSamples.y[i];
 		var ex = isFinite(x) && isFinite(y);
@@ -72,7 +72,7 @@ canvasPlot.curveDrawerLinear.drawPart = function (mSamples, first, last) {
 			}
 		} else if (this.irPrev) {
 			this.ctx.beginPath();
-			this.ctx.arc(x, y, this.pointRadius, 0.0, this.eAngle);
+			this.ctx.arc(this.xPrev, this.yPrev, this.pointRadius, 0.0, this.eAngle);
 			this.ctx.fill();
 		}
 
