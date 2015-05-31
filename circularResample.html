@@ -1,12 +1,14 @@
 <html>
 <head>
-  <title>canvasPlot.js linear resampler example</title>
+  <title>canvasPlot.js circular linear resampler example</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="canvasPlot.js" type="text/javascript"></script>
   <script src="mapLinear.js" type="text/javascript"></script>
   <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <script src="curveCircular.js" type="text/javascript"></script>
   <script src="simplePlot.js" type="text/javascript"></script>
   <script src="resampler.js" type="text/javascript"></script>
+  <script src="resamplerCircular.js" type="text/javascript"></script>
   <script src="resamplerLinear.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
@@ -60,59 +62,65 @@ function init() {
 	var r = Object.create(canvasPlot.resamplerLinear);
 	r.init();
 
-	function x_fill(x, n) {
-		var k = 1.0 / (n - 1.0);
-		x[0] = 0.0;
-		var i = 1;
-		for (; i < n; i++)
-			x[i] = x[i - 1] + k;
-		for (; i < x.length; i++)
+	function x_fill(x, first, n) {
+		for (var i = 0; i < x.length; i++)
 			x[i] = NaN;
+
+		var k = 1.0 / (n - 1.0);
+
+		if (first + n > x.length) {
+			for (i = 0; i < x.length - first; i++)
+				x[first + i] = i * k;
+			for (var j = 0; i < n; i++, j++)
+				x[j] = i * k;
+		} else {
+			for (i = 0; i < n; i++)
+				x[first + i] = i * k;
+		}
 	}
 
-	function update_out(n_in, n_out, step) {
-		x_fill(x_out, n_out);
+	function update_out(n_in, n_out, step, first_in, first_out) {
+		x_fill(x_out, first_out, n_out);
 
 		r.stepRatio = (n_in - 1.0) / (n_out - 1.0);
 		r.update();
 
-		var rw = { nextIn: 0, nextOut: 0 };
-		while (rw.nextIn < n_in) {
-			var countIn = n_in - rw.nextIn;
-			if (countIn > step)
-				countIn = step;
+		for (var j = 0; j < y_out.length; j++)
+			y_out[j] = NaN;
 
-			r.process(y_in, y_out, rw.nextIn, rw.nextOut, countIn,
-				  n_out - rw.nextOut, rw);
+		var rw = { nextIn: first_in, nextOut: first_out };
+		for (var countIn = n_in; countIn >= step;
+		     countIn -= step) {
+			r.processCircular(y_in, y_out, rw.nextIn, rw.nextOut,
+					  step, rw);
+			if (rw.nextIn > y_in.length)
+				rw.nextIn -= y_in.length;
 		}
-
-		for (; rw.nextOut < y_out.length; rw.nextOut++)
-			y_out[rw.nextOut] = NaN;
+		if (countIn > 0)
+			r.processCircular(y_in, y_out, rw.nextIn, rw.nextOut,
+					  countIn, rw);
 	}
 
-	function update_in(n_in, n_out, step) {
-		x_fill(x_in, n_in);
+	function update_in(n_in, n_out, step, first_in, first_out) {
+		x_fill(x_in, first_in, n_in);
 
 		var pi4 = 4.0 * Math.PI;
-		var i = 0;
-		for (; i < n_in; i++)
+		for (i = 0; i < y_in.length; i++)
 			y_in[i] = Math.sin(pi4 * x_in[i]);
-		for (; i < y_in.length; i++)
-			y_in[i] = NaN;
 
-		update_out(n_in, n_out, step);
+		update_out(n_in, n_out, step, first_in, first_out);
 	}
 
 	p.curves = [];
 
 	var samples = Object.create(canvasPlot.samples);
 	samples.init(x_in, y_in);
-	p.curves[0] = Object.create(canvasPlot.curve);
+	p.curves[0] = Object.create(canvasPlot.curveCircular);
 	p.curves[0].init(samples, null);
 
 	samples = Object.create(canvasPlot.samples);
 	samples.init(x_out, y_out);
-	p.curves[1] = Object.create(canvasPlot.curve);
+	p.curves[1] = Object.create(canvasPlot.curveCircular);
 	p.curves[1].init(samples, null);
 	p.curves[1].lineStyle = "#ff0000";
 
@@ -120,17 +128,24 @@ function init() {
 
 	var ctx = canvas.getContext("2d");
 
-	function draw() {
+	function draw(first_in, last_in, first_out, last_out) {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		p.draw(ctx, drawer);
+		p.grid.draw(ctx, p.frame.innerArea);
+		p.curves[0].drawPart(ctx, p.frame.innerArea, drawer,
+				     first_in, last_in);
+		p.curves[1].drawPart(ctx, p.frame.innerArea, drawer,
+				     first_out, last_out);
+		p.frame.draw(ctx);
 	}
 
-	function setValElement(name, n_elem) {
+	function setValElement(name, n_elem, m1) {
 		var elem = document.getElementById(name);
 		elem.valElement = document.getElementById(name + "_val");
 		if (n_elem) {
 			var val = parseInt(elem.value);
 			var n = parseInt(n_elem.value);
+			if (m1)
+				n--;
 			if (val > n)
 				elem.value = n;
 			elem.max = n;
@@ -141,10 +156,13 @@ function init() {
 	}
 	var n_in_elem = setValElement("n_in");
 	var n_out_elem = setValElement("n_out");
-	var step_elem = setValElement("step", n_in_elem);
+	var step_elem = setValElement("step", n_in_elem, false);
+	var first_in_elem = setValElement("first_in", n_in_elem, true);
+	var first_out_elem = setValElement("first_out", n_out_elem, true);
 
 	update_in(parseInt(n_in_elem.value), parseInt(n_out_elem.value),
-		  parseInt(step_elem.value));
+		  parseInt(step_elem.value), parseInt(first_in_elem.value),
+		  parseInt(first_out_elem.value));
 
 	function input() {
 		if (this.valElement.innerHTML == this.value)
@@ -154,8 +172,10 @@ function init() {
 		var n_in = parseInt(n_in_elem.value);
 		var n_out = parseInt(n_out_elem.value);
 		var step = parseInt(step_elem.value);
+		var first_in = parseInt(first_in_elem.value);
+		var first_out = parseInt(first_out_elem.value);
 
-		if (this == n_in_elem) {
+		if (this == n_in_elem || this == first_in_elem) {
 			if (step > n_in) {
 				step = n_in;
 				step_elem.value = step;
@@ -163,16 +183,37 @@ function init() {
 			}
 			step_elem.max = n_in;
 
-			update_in(n_in, n_out, step);
-		} else
-			update_out(n_in, n_out, step);
+			if (first_in >= n_in) {
+				first_in = n_in - 1;
+				first_in_elem.value = first_in;
+				first_in_elem.valElement.innerHTML = first_in;
+			}
+			first_in_elem.max = n_in - 1;
+
+			update_in(n_in, n_out, step, first_in, first_out);
+		} else {
+			if (this == n_out_elem) {
+				if (first_out >= n_out) {
+					first_out = n_out - 1;
+					first_out_elem.value = first_out;
+					first_out_elem.valElement.innerHTML
+						= first_out;
+				}
+				first_out_elem.max = n_out - 1;
+			}
+
+			update_out(n_in, n_out, step, first_in, first_out);
+		}
 
 		p.update(false, false);
-		draw();
+		draw(first_in, (first_in + n_in - 1) % y_in.length,
+		     first_out, (first_out + n_out - 1) % y_out.length);
 	}
 	n_in_elem.addEventListener("input", input);
 	n_out_elem.addEventListener("input", input);
 	step_elem.addEventListener("input", input);
+	first_in_elem.addEventListener("input", input);
+	first_out_elem.addEventListener("input", input);
 
 	function resize() {
 		var r = canvas.parentNode.getBoundingClientRect();
@@ -193,9 +234,13 @@ function init() {
 		p.frame.area.width = canvas.width;
 		p.frame.area.height = canvas.height;
 
+		var n_in = parseInt(n_in_elem.value);
+		var n_out = parseInt(n_out_elem.value);
+		var first_in = parseInt(first_in_elem.value);
+		var first_out = parseInt(first_out_elem.value);
 		p.update(true, true);
-
-		draw();
+		draw(first_in, (first_in + n_in - 1) % y_in.length,
+		     first_out, (first_out + n_out - 1) % y_out.length);
 	}
 	resize();
 	window.addEventListener("resize", resize);
@@ -221,6 +266,16 @@ window.addEventListener("load", init);
       <label for="step">resampling step: </label>
       <input type="range" id="step" min="1" max="100" step="1" value="100" />
       <span id="step_val">100</span>
+    </div>
+    <div>
+      <label for="first_in">first in: </label>
+      <input type="range" id="first_in" min="0" max="99" step="1" value="0" />
+      <span id="first_in_val">0</span>
+    </div>
+    <div>
+      <label for="first_out">first out: </label>
+      <input type="range" id="first_out" min="0" max="99" step="1" value="0" />
+      <span id="first_out_val">0</span>
     </div>
   </form>
 </html>

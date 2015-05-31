@@ -26,35 +26,40 @@ canvasPlot.resamplerLinear.update = function () {
 
 canvasPlot.resamplerLinear.process = function (yIn, yOut, firstIn, firstOut,
 					       countIn, countOut, rw) {
-	var nextIn = firstIn + countIn;
-	var nextOut = firstOut + countOut;
+	var lastIn = firstIn + countIn - 1;
+	var lastOut = firstOut + countOut - 1;
 	var j = firstOut;
 
 	var d = yIn[firstIn] - this.prev;
-	for (; this.offset < 0.0 && j < nextOut;
+	for (; this.offset < 0.0 && j <= lastOut;
 	     this.offset += this.stepRatio, j++)
 		yOut[j] = yIn[firstIn] + this.offset * d;
 
+	if (this.offset == 0.0 && j <= lastOut) {
+		yOut[j] = yIn[firstIn];
+		this.offset += this.stepRatio;
+		j++;
+	}
+
 	var i = firstIn + this.offset;
-	var il = Math.floor(i);
-	var il1 = il - 1;
-	d = yIn[il] - yIn[il1];
-	for (; i < nextIn && j < nextOut; i += this.stepRatio, j++) {
+	var il = -1;  // force update on first run
+	var ih;
+	for (; i <= lastIn && j <= lastOut; i += this.stepRatio, j++) {
 		var ix = i - il;
-		if (ix >= 1.0) {
-			il = Math.floor(i);
-			il1 = il - 1;
+		if (ix > 1.0) {
+			ih = Math.ceil(i);
+			il = ih - 1;
 			ix = i - il;
-			d = yIn[il] - yIn[il1];
+			d = yIn[ih] - yIn[il];
 		}
-		yOut[j] = yIn[il1] + ix * d;
+		yOut[j] = yIn[il] + ix * d;
 	}
 
 	rw.nextOut = j;
 	rw.nextIn = Math.floor(i);
-	if (i < nextIn) {
+	if (rw.nextIn <= lastIn) {
 		this.prev = yIn[rw.nextIn];
-		rw.nextIn += 1;
+		rw.nextIn++;
 	}
 	this.offset = i - rw.nextIn;
 };

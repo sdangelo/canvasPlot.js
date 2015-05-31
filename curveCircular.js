@@ -19,10 +19,7 @@ canvasPlot.curveDrawer.drawPartCircular = function (mSamples, first, last) {
 		this.drawPart(mSamples, first, mSamples.x.length - 1);
 		this.drawPart(mSamples, 0, last);
 	} else
-{
 		this.drawPart(mSamples, first, last);
-console.log("yeah");
-}
 };
 
 canvasPlot.curveCircular = Object.create(canvasPlot.curve);
