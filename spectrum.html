@@ -1,0 +1,212 @@
+<html>
+<head>
+  <title>canvasPlot.js spectrum analyzer example</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script src="mapSemiLogX.js" type="text/javascript"></script>
+  <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <script src="simplePlot.js" type="text/javascript"></script>
+  <script type="text/javascript">
+function init() {
+	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+	var osc = audioCtx.createOscillator();
+	var gainIn = audioCtx.createGain();
+	var analyser = audioCtx.createAnalyser();
+	var gainOut = audioCtx.createGain();
+
+	osc.connect(gainIn);
+	gainIn.connect(analyser);
+	analyser.connect(gainOut);
+	gainOut.connect(audioCtx.destination);
+
+	var canvas = document.getElementById("canvas");
+	var form = document.getElementById("form");
+
+	var style = window.getComputedStyle(canvas);
+	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
+			 + parseFloat(style.getPropertyValue("margin-right"));
+	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
+			  + parseFloat(style.getPropertyValue("margin-bottom"));
+	style = window.getComputedStyle(form);
+	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
+	var oldWidth = 0;
+	var oldHeight = 0;
+
+	var p = Object.create(canvasPlot.simplePlot);
+	p.init(Object.create(canvasPlot.mapSemiLogX), null, null, null);
+
+	p.frame.area.p.x = 0;
+	p.frame.area.p.y = 0;
+
+	p.map.xRange.min = 20.0;
+	p.map.xRange.max = 20000.0;
+	p.map.yRange.min = analyser.maxDecibels - 80.0;
+	p.map.yRange.max = analyser.maxDecibels + 20.0;
+
+	p.grid.tics = Array(34);
+	var xtic = Object.create(canvasPlot.tic);
+	xtic.direction = canvasPlot.direction.vertical;
+	var ytic = Object.create(canvasPlot.tic);
+	ytic.direction = canvasPlot.direction.horizontal;
+
+	var i = 0;
+	for (var v = 30; v < 100; i++, v += 10) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = 100; v < 1000; i++, v += 100) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = 1000; v <= 10000; i++, v += 1000) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = p.map.yRange.min + 10; v < p.map.yRange.max;
+	     i++, v += 10) {
+		p.grid.tics[i] = Object.create(ytic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+
+	var buffer = new Float32Array(analyser.frequencyBinCount);
+	var x = new Array(buffer.length);
+	var step = 0.5 * audioCtx.sampleRate / x.length;
+	for (var i = 0; i < x.length; i++)
+		x[i] = step * i;
+
+	var samples = Object.create(canvasPlot.samples);
+	samples.init(x, buffer);
+	p.curves[0] = Object.create(canvasPlot.curve);
+	p.curves[0].init(samples, null);
+
+	function setValElement(name) {
+		var elem = document.getElementById(name);
+		elem.valElement = document.getElementById(name + "_val");
+		if (elem.valElement.innerHTML != elem.value)
+			elem.valElement.innerHTML = elem.value;
+		return elem;
+	}
+	var frequency_elem = setValElement("frequency");
+	var volume_in_elem = setValElement("volume_in");
+	var volume_out_elem = setValElement("volume_out");
+
+	osc.frequency.value = parseFloat(frequency_elem.value);
+	gainIn.gain.value = parseFloat(volume_in_elem.value) * 0.01;
+	gainOut.gain.value = parseFloat(volume_out_elem.value) * 0.01;
+
+	function waveform_change () {
+		osc.type = this.value;
+	}
+	var waveform_elems = document.getElementsByName("waveform");
+	for (var i = 0; i < waveform_elems.length; i++) {
+		waveform_elems[i].addEventListener("change", waveform_change);
+		if (waveform_elems[i].checked)
+			osc.type = waveform_elems[i].value;
+	}
+
+	function input() {
+		if (this.valElement.innerHTML == this.value)
+			return;
+		this.valElement.innerHTML = this.value;
+
+		switch (this) {
+			case frequency_elem:
+				osc.frequency.value = parseFloat(this.value);
+				break;
+			case volume_in:
+				gainIn.gain.value = parseFloat(this.value) * 0.01;
+				break;
+			case volume_out:
+				gainOut.gain.value = parseFloat(this.value) * 0.01;
+				break;
+		}
+	}
+	frequency_elem.addEventListener("input", input);
+	volume_in.addEventListener("input", input);
+	volume_out.addEventListener("input", input);
+
+	osc.start();
+
+	var drawer = Object.create(canvasPlot.curveDrawerLinear);
+
+	var ctx = canvas.getContext("2d");
+
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		p.draw(ctx, drawer);
+	}
+
+	function updateDraw() {
+		requestAnimationFrame(updateDraw);
+		analyser.getFloatFrequencyData(buffer);
+		for (var i = 0; i < buffer.length; i++)
+			buffer[i] += analyser.maxDecibels;
+		p.update(false, true);
+		draw();
+	}
+
+	function resize() {
+		var r = canvas.parentNode.getBoundingClientRect();
+		if (r.width == oldWidth && r.height == oldHeight)
+			return;
+		oldWidth = r.width;
+		oldHeight = r.height;
+
+		var xHeight = leaveHeight
+			      + parseFloat(style.getPropertyValue("height"));
+
+		canvas.width = r.width - leaveWidth;
+		canvas.height = r.height - xHeight;
+
+		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
+		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+
+		p.frame.area.width = canvas.width;
+		p.frame.area.height = canvas.height;
+
+		p.update(true, true);
+
+		draw();
+	}
+	resize();
+	window.addEventListener("resize", resize);
+
+	updateDraw();
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <form id="form">
+    <div>
+      <label>waveform: </label>
+      <input type="radio" name="waveform" value="sine"/ checked> sine
+      <input type="radio" name="waveform" value="sawtooth"/> sawtooth
+      <input type="radio" name="waveform" value="square"/> square
+      <input type="radio" name="waveform" value="triangle"/> triangle
+    </div>
+    <div>
+      <label for="frequency">frequency: </label>
+      <input type="range" id="frequency" min="20" max="20000" step="0.1" value="440" />
+      <span id="frequency_val">440</span> Hz
+    </div>
+    <div>
+      <label for="volume_in">volume in: </label>
+      <input type="range" id="volume_in" min="0" max="100" step="1" value="100" />
+      <span id="volume_in_val">100</span>%
+    </div>
+    <div>
+      <label for="volume_in">volume out: </label>
+      <input type="range" id="volume_out" min="0" max="100" step="1" value="0" />
+      <span id="volume_out_val">0</span>%
+    </div>
+  </form>
+</body>
+</html>

@@ -55,7 +55,7 @@ canvasPlot.curveDrawerLinear.drawPart = function (mSamples, first, last) {
 		var x = mSamples.x[i];
 		var y = mSamples.y[i];
 		var ex = isFinite(x) && isFinite(y);
-		var ir = this.area.contains(x, y);
+		var ir = this.area.contains(x, y, 0.5, 0.5, 0.5, 0.5);
 
 		if (this.pathBegun) {
 			if (this.exPrev)

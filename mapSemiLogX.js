@@ -14,29 +14,31 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-canvasPlot.mapLinear = Object.create(canvasPlot.map);
+canvasPlot.mapSemiLogX = Object.create(canvasPlot.map);
 
-canvasPlot.mapLinear.kx0 = NaN;
-canvasPlot.mapLinear.kx1 = NaN;
-canvasPlot.mapLinear.ky0 = NaN;
-canvasPlot.mapLinear.ky1 = NaN;
+canvasPlot.mapSemiLogX.kx0 = NaN;
+canvasPlot.mapSemiLogX.kx1 = NaN;
+canvasPlot.mapSemiLogX.ky0 = NaN;
+canvasPlot.mapSemiLogX.ky1 = NaN;
 
-canvasPlot.mapLinear.update = function (area) {
-	this.kx1 = area.width / (this.xRange.max - this.xRange.min);
-	this.kx0 = area.p.x - this.kx1 * this.xRange.min - 0.5;
+canvasPlot.mapSemiLogX.update = function (area) {
+	this.kx1 = area.width / Math.log10(this.xRange.max / this.xRange.min);
+	this.kx0 = area.p.x - 0.5;
 	this.ky1 = -area.height / (this.yRange.max - this.yRange.min);
 	this.ky0 = area.p2.y - this.ky1 * this.yRange.min - 0.5;
 };
 
-canvasPlot.mapLinear.mapPoint = function (x, y, m) {
-	m.x = this.kx0 + this.kx1 * x;
+canvasPlot.mapSemiLogX.mapPoint = function (x, y, m) {
+	m.x = this.kx0 + this.kx1 * Math.log10(x / this.xRange.min);
 	m.y = this.ky0 + this.ky1 * y;
 };
 
-canvasPlot.mapLinear.mapPoints = function (x, y, mx, my, xFirst, yFirst,
-					   mxFirst, myFirst, count) {
+canvasPlot.mapSemiLogX.mapPoints = function (x, y, mx, my, xFirst, yFirst,
+					     mxFirst, myFirst, count) {
 	for (var i = 0; i < count; i++) {
-		mx[mxFirst + i] = this.kx0 + this.kx1 * x[xFirst + i];
+		mx[mxFirst + i] = this.kx0
+				  + this.kx1
+				  * Math.log10(x[xFirst + i] / this.xRange.min);
 		my[myFirst + i] = this.ky0 + this.ky1 * y[yFirst + i];
 	}
 };

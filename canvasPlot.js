@@ -57,9 +57,9 @@ var canvasPlot = {
 			this.p2.y = this.p.y + this.height;
 		},
 
-		contains: function (x, y) {
-			return x >= this.p.x && x < this.p2.x
-			       && y >= this.p.y && y < this.p2.y;
+		contains: function (x, y, lx, tx, rx, bx) {
+			return x >= (this.p.x - lx) && x < (this.p2.x + rx)
+			       && y >= (this.p.y - tx) && y < (this.p2.y + bx);
 		}
 	},
 
