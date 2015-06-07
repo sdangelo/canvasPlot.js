@@ -31,3 +31,17 @@ canvasPlot.curveCircular.drawPart = function (ctx, area, curveDrawer,
 		curveDrawer.drawPartCircular(this.mSamples, first, last);
 		curveDrawer.drawEnd();
 };
+
+canvasPlot.curveCircular.updatePart = function (map, first, count) {
+	var l1 = this.samples.x.length - first;
+	var l2 = count - l1;
+	if (l2 >= 0) {
+		map.mapPoints(this.samples.x, this.samples.y, this.mSamples.x,
+			      this.mSamples.y, first, first, first, first, l1);
+		map.mapPoints(this.samples.x, this.samples.y, this.mSamples.x,
+			      this.mSamples.y, 0, 0, 0, 0, l2);
+	} else
+		map.mapPoints(this.samples.x, this.samples.y, this.mSamples.x,
+			      this.mSamples.y, first, first, first, first,
+			      count);
+};

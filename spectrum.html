@@ -118,17 +118,19 @@ function init() {
 			case frequency_elem:
 				osc.frequency.value = parseFloat(this.value);
 				break;
-			case volume_in:
-				gainIn.gain.value = parseFloat(this.value) * 0.01;
+			case volume_in_elem:
+				gainIn.gain.value = parseFloat(this.value)
+						    * 0.01;
 				break;
-			case volume_out:
-				gainOut.gain.value = parseFloat(this.value) * 0.01;
+			case volume_out_elem:
+				gainOut.gain.value = parseFloat(this.value)
+						     * 0.01;
 				break;
 		}
 	}
 	frequency_elem.addEventListener("input", input);
-	volume_in.addEventListener("input", input);
-	volume_out.addEventListener("input", input);
+	volume_in_elem.addEventListener("input", input);
+	volume_out_elem.addEventListener("input", input);
 
 	osc.start();
 
@@ -195,12 +197,14 @@ window.addEventListener("load", init);
     <div>
       <label for="frequency">frequency: </label>
       <input type="range" id="frequency" min="20" max="20000" step="0.1" value="440" />
-      <span id="frequency_val">440</span> Hz
+      <span id="frequency_val">440</span>
+      <span>Hz</span>
     </div>
     <div>
       <label for="volume_in">volume in: </label>
       <input type="range" id="volume_in" min="0" max="100" step="1" value="100" />
-      <span id="volume_in_val">100</span>%
+      <span id="volume_in_val">100</span>
+      <span>%</span>
     </div>
     <div>
       <label for="volume_in">volume out: </label>

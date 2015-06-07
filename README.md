@@ -6,4 +6,5 @@ I am too lazy to explain hows and whys, just take a look at the example files:
 * resample.html - linear resampling;
 * circularPlot.html - circular buffer and plotting;
 * circularResample.html - circular linear resampler;
-* spectrum.html - spectrum analyzer.
+* spectrum.html - spectrum analyzer;
+* XYScope.html - XY oscilloscope.

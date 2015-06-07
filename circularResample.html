@@ -88,14 +88,12 @@ function init() {
 		for (var j = 0; j < y_out.length; j++)
 			y_out[j] = NaN;
 
-		var rw = { nextIn: first_in, nextOut: first_out };
+		var rw = { nextIn: first_in, readIn: 0, firstOut: first_out,
+			   nextOut: first_out };
 		for (var countIn = n_in; countIn >= step;
-		     countIn -= step) {
+		     countIn -= rw.readIn)
 			r.processCircular(y_in, y_out, rw.nextIn, rw.nextOut,
 					  step, rw);
-			if (rw.nextIn > y_in.length)
-				rw.nextIn -= y_in.length;
-		}
 		if (countIn > 0)
 			r.processCircular(y_in, y_out, rw.nextIn, rw.nextOut,
 					  countIn, rw);

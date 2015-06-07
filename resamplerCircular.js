@@ -17,46 +17,35 @@
 canvasPlot.resampler.processCircular = function (yIn, yOut, firstIn, firstOut,
 						 countIn, rw) {
 	rw.nextIn = firstIn;
+	rw.readIn = 0;
 	rw.firstOut = firstOut;
 	rw.nextOut = firstOut;
+	rw.writtenOut = 0;
 
-	var lastIn = firstIn + countIn - 1;
-	if (lastIn >= yIn.length)
-		lastIn -= yIn.length;
-
-	var inWrapped = false;
 	var outWrapped = false;
-	while (true) {
+	while (countIn > 0) {
 		var inCountEnd = yIn.length - rw.nextIn;
 		var outCountEnd = yOut.length - rw.nextOut;
 
 		var fi = rw.nextIn;
+		var fo = rw.nextOut;
 		var ci = inCountEnd < countIn ? inCountEnd : countIn;
 
-		this.process(yIn, yOut, fi, rw.nextOut, ci, outCountEnd, rw);
+		this.process(yIn, yOut, fi, fo, ci, outCountEnd, rw);
 
-		countIn -= rw.nextIn - fi;
+		var c = rw.nextIn - fi;
+		rw.readIn += c;
+		rw.writtenOut += rw.nextOut - fo;
+		countIn -= c;
 
-		var no = rw.nextOut;
 		if (rw.nextOut == yOut.length) {
 			outWrapped = true;
 			rw.nextOut = 0;
 		}
-		if (outWrapped && no > rw.firstOut)
+		if (outWrapped && rw.nextOut > rw.firstOut)
 			rw.firstOut = rw.nextOut;
 
-		if (firstIn <= lastIn) {
-			if (rw.nextIn > lastIn)
-				break;
-		} else {
-			var ni = rw.nextIn;
-			if (rw.nextIn >= yIn.length) {
-				inWrapped = true;
-				ni -= yIn.length;
-			}
-			if (inWrapped && ni > lastIn)
-				break;
-			rw.nextIn = ni;
-		}
+		if (rw.nextIn >= yIn.length)
+			rw.nextIn %= yIn.length;
 	}
 }

@@ -1,0 +1,418 @@
+<html>
+<head>
+  <title>canvasPlot.js XY oscilloscope example</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script src="mapLinear.js" type="text/javascript"></script>
+  <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <script src="curveCircular.js" type="text/javascript"></script>
+  <script src="circularBuffer.js" type="text/javascript"></script>
+  <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="resampler.js" type="text/javascript"></script>
+  <script src="resamplerCircular.js" type="text/javascript"></script>
+  <script src="resamplerLinear.js" type="text/javascript"></script>
+  <script type="text/javascript">
+function init() {
+	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+	var osc1 = audioCtx.createOscillator();
+	var osc2 = audioCtx.createOscillator();
+	var delay = audioCtx.createDelay(1.0 / 20.0);
+	var gain1 = audioCtx.createGain();
+	var gain2 = audioCtx.createGain();
+	var merger = audioCtx.createChannelMerger(2);
+	var proc = audioCtx.createScriptProcessor(4096, 2, 2);
+	var gainOut = audioCtx.createGain();
+
+	osc1.connect(gain1);
+	osc2.connect(delay);
+	delay.connect(gain2);
+	gain1.connect(merger, 0, 0);
+	gain2.connect(merger, 0, 1);
+	merger.connect(proc);
+	proc.connect(gainOut);
+	gainOut.connect(audioCtx.destination);
+
+	var canvas = document.getElementById("canvas");
+	var form = document.getElementById("form");
+
+	var style = window.getComputedStyle(canvas);
+	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
+			 + parseFloat(style.getPropertyValue("margin-right"));
+	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
+			  + parseFloat(style.getPropertyValue("margin-bottom"));
+	style = window.getComputedStyle(form);
+	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
+	var oldWidth = 0;
+	var oldHeight = 0;
+
+	var p = Object.create(canvasPlot.simplePlot);
+	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
+
+	p.frame.area.p.x = 0;
+	p.frame.area.p.y = 0;
+
+	p.map.xRange.min = -1.0;
+	p.map.xRange.max = 1.0;
+	p.map.yRange.min = -1.0;
+	p.map.yRange.max = 1.0;
+
+	p.grid.tics = Array(18);
+	var xtic = Object.create(canvasPlot.tic);
+	xtic.direction = canvasPlot.direction.vertical;
+	var ytic = Object.create(canvasPlot.tic);
+	ytic.direction = canvasPlot.direction.horizontal;
+
+	var i = 0;
+	for (var v = -0.8; v < 1.0; i++, v += 0.2) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = -0.8; v < 1.0; i++, v += 0.2) {
+		p.grid.tics[i] = Object.create(ytic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+
+	var maxPersistence = 1;
+	var maxPoints = 1000;
+
+	var maxPersistenceSamples =
+		Math.ceil(maxPersistence * audioCtx.sampleRate);
+	var buf1 = Object.create(canvasPlot.circularBuffer);
+	buf1.init(new Array(maxPersistenceSamples));
+	var buf2 = Object.create(canvasPlot.circularBuffer);
+	buf2.init(new Array(maxPersistenceSamples));
+	for (var i = 0; i < maxPersistenceSamples; i++)
+		buf1.buffer[i] = buf2.buffer[i] = NaN;
+	var newSamples = 0;
+
+	proc.onaudioprocess = function(event) {
+		var in1 = event.inputBuffer.getChannelData(0);
+		var in2 = event.inputBuffer.getChannelData(1);
+		var out1 = event.outputBuffer.getChannelData(0);
+		var out2 = event.outputBuffer.getChannelData(1);
+		for (var i = 0; i < event.inputBuffer.length; i++) {
+			out1[i] = in1[i];
+			out2[i] = in2[i];
+		}
+		buf1.write(in1, 0, event.inputBuffer.length);
+		buf2.write(in2, 0, event.inputBuffer.length);
+		newSamples += i;
+	};
+
+	var samples = Object.create(canvasPlot.samples);
+	samples.init(new Array(maxPoints), new Array(maxPoints));
+	p.curves[0] = Object.create(canvasPlot.curveCircular);
+	p.curves[0].init(samples, null);
+	for (var i = 0; i < samples.x.length; i++)
+		samples.x[i] = samples.y[i] = p.curves[0].mSamples.x[i] =
+			p.curves[0].mSamples.y[i] = NaN;
+
+	var resampler1 = Object.create(canvasPlot.resamplerLinear);
+	var resampler2 = Object.create(canvasPlot.resamplerLinear);
+	resampler1.init();
+	resampler2.init();
+
+	function setValElement(name) {
+		var elem = document.getElementById(name);
+		elem.valElement = document.getElementById(name + "_val");
+		if (elem.valElement.innerHTML != elem.value)
+			elem.valElement.innerHTML = elem.value;
+		return elem;
+	}
+	var frequency_x_elem = setValElement("frequency_x");
+	var frequency_y_elem = setValElement("frequency_y");
+	var volume_in_x_elem = setValElement("volume_in_x");
+	var volume_in_y_elem = setValElement("volume_in_y");
+	var volume_out_elem = setValElement("volume_out");
+	var dephase_elem = setValElement("dephase");
+	var persistence_elem = setValElement("persistence");
+	var points_elem = setValElement("points");
+
+	osc1.frequency.value = parseFloat(frequency_x_elem.value);
+	osc2.frequency.value = parseFloat(frequency_y_elem.value);
+	delay.delayTime.value = 0.01 * parseFloat(dephase_elem.value)
+				/ osc2.frequency.value;
+	gain1.gain.value = parseFloat(volume_in_x_elem.value) * 0.01;
+	gain2.gain.value = parseFloat(volume_in_y_elem.value) * 0.01;
+	gainOut.gain.value = parseFloat(volume_out_elem.value) * 0.01;
+	var persistence = Math.ceil(parseFloat(persistence_elem.value)
+				    * audioCtx.sampleRate);
+	var points = parseInt(points_elem.value);
+	resampler1.stepRatio = resampler2.stepRatio =
+		maxPersistenceSamples / points;
+	resampler1.update();
+	resampler2.update();
+	var persistenceOutSamples =
+		Math.ceil(persistence / resampler1.stepRatio);
+
+	function waveform_x_change () {
+		osc1.type = this.value;
+	}
+	function waveform_y_change () {
+		osc2.type = this.value;
+	}
+	var waveform_x_elems = document.getElementsByName("waveform_x");
+	var waveform_y_elems = document.getElementsByName("waveform_y");
+	for (var i = 0; i < waveform_x_elems.length; i++) {
+		waveform_x_elems[i].addEventListener("change",
+						     waveform_x_change);
+		if (waveform_x_elems[i].checked)
+			osc1.type = waveform_x_elems[i].value;
+	}
+	for (var i = 0; i < waveform_y_elems.length; i++) {
+		waveform_y_elems[i].addEventListener("change",
+						     waveform_y_change);
+		if (waveform_y_elems[i].checked)
+			osc2.type = waveform_y_elems[i].value;
+	}
+
+	function input() {
+		if (this.valElement.innerHTML == this.value)
+			return;
+		this.valElement.innerHTML = this.value;
+
+		switch (this) {
+			case frequency_x_elem:
+				osc1.frequency.value = parseFloat(this.value);
+				break;
+			case frequency_y_elem:
+				osc2.frequency.value = parseFloat(this.value);
+				delay.delayTime.value =
+					0.01 * parseFloat(dephase_elem.value)
+					/ osc2.frequency.value;
+				break;
+			case volume_in_x_elem:
+				gain1.gain.value = parseFloat(this.value)
+						   * 0.01;
+				break;
+			case volume_in_y_elem:
+				gain2.gain.value = parseFloat(this.value)
+						   * 0.01;
+				break;
+			case volume_out_elem:
+				gainOut.gain.value = parseFloat(this.value)
+						     * 0.01;
+				break;
+			case dephase_elem:
+				delay.delayTime.value = 0.01
+							* parseFloat(this.value)
+							/ osc2.frequency.value;
+				break;
+			case persistence_elem:
+				persistence =
+					Math.ceil(parseFloat(this.value)
+						  * audioCtx.sampleRate);
+				persistenceOutSamples =
+					Math.ceil(persistence
+						  / resampler1.stepRatio);
+				break;
+			case points_elem:
+				points = parseInt(this.value);
+				resampler1.stepRatio = resampler2.stepRatio =
+					maxPersistenceSamples / points;
+				persistenceOutSamples =
+					Math.ceil(persistence
+						  / resampler1.stepRatio);
+				break;
+		}
+	}
+	frequency_x_elem.addEventListener("input", input);
+	frequency_y_elem.addEventListener("input", input);
+	volume_in_x_elem.addEventListener("input", input);
+	volume_in_y_elem.addEventListener("input", input);
+	volume_out_elem.addEventListener("input", input);
+	dephase_elem.addEventListener("input", input);
+	persistence_elem.addEventListener("input", input);
+	points_elem.addEventListener("input", input);
+
+	osc1.start();
+	osc2.start();
+
+	var drawer = Object.create(canvasPlot.curveDrawerLinear);
+
+	var ctx = canvas.getContext("2d");
+
+	var rw = { nextIn: 0, readIn: 0, firstOut: 0, nextOut: 0,
+		   writtenOut: 0 };
+
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		p.grid.draw(ctx, p.frame.innerArea);
+		var last = rw.firstOut + persistenceOutSamples - 1;
+		if (last > p.curves[0].samples.x.length)
+			last -= p.curves[0].samples.x.length;
+		p.curves[0].drawPart(ctx, p.frame.innerArea, drawer,
+				     rw.firstOut, last);
+		p.frame.draw(ctx);
+	}
+
+	var oldRatio = resampler1.stepRatio;
+	function updateDraw() {
+		requestAnimationFrame(updateDraw);
+
+		if (newSamples > buf1.buffer.length
+		    || oldRatio != resampler1.stepRatio) {
+			resampler1.update();
+			resampler2.update();
+			newSamples = buf1.buffer.length
+			if (oldRatio != resampler1.stepRatio)
+				for (var i = 0;
+				     i < p.curves[0].mSamples.x.length; i++)
+					p.curves[0].mSamples.x[i] =
+						p.curves[0].mSamples.y[i] = NaN;
+			oldRatio = resampler1.stepRatio;
+		}
+
+		if (newSamples <= 0)
+			return;
+
+		var firstIn = buf1.index - newSamples;
+		if (firstIn < 0)
+			firstIn += buf1.buffer.length;
+		var firstOut = rw.nextOut;
+
+		resampler1.processCircular(buf1.buffer, samples.x, firstIn,
+					   firstOut, newSamples, rw);
+		resampler2.processCircular(buf2.buffer, samples.y, firstIn,
+					   firstOut, newSamples, rw);
+
+		newSamples -= rw.readIn;
+
+		// reusing rw.firstOut for drawing
+		rw.firstOut = rw.nextOut - persistenceOutSamples;
+		if (rw.firstOut < 0)
+			rw.firstOut += samples.x.length;
+		p.curves[0].updatePart(p.map, rw.firstOut,
+				       persistenceOutSamples);
+
+		draw();
+	}
+
+	function resize() {
+		var r = canvas.parentNode.getBoundingClientRect();
+		if (r.width == oldWidth && r.height == oldHeight)
+			return;
+		oldWidth = r.width;
+		oldHeight = r.height;
+
+		var xHeight = leaveHeight
+			      + parseFloat(style.getPropertyValue("height"));
+
+		canvas.width = r.width - leaveWidth;
+		canvas.height = r.height - xHeight;
+
+		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
+		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+
+		p.frame.area.width = canvas.width;
+		p.frame.area.height = canvas.height;
+
+		p.update(true, true);
+
+		draw();
+	}
+	resize();
+	window.addEventListener("resize", resize);
+
+	updateDraw();
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <form id="form">
+    <div>
+      <span>waveform</span>
+      <label>x:</label>
+      <span>
+        <input type="radio" name="waveform_x" value="sine"/ checked> sine
+        <input type="radio" name="waveform_x" value="sawtooth"/> sawtooth
+        <input type="radio" name="waveform_x" value="square"/> square
+        <input type="radio" name="waveform_x" value="triangle"/> triangle
+      </span>
+      <span></span>
+      <span></span>
+      <label>y:</label>
+      <span>
+        <input type="radio" name="waveform_y" value="sine"/ checked> sine
+        <input type="radio" name="waveform_y" value="sawtooth"/> sawtooth
+        <input type="radio" name="waveform_y" value="square"/> square
+        <input type="radio" name="waveform_y" value="triangle"/> triangle
+      </span>
+      <span></span>
+      <span></span>
+    </div>
+    <div>
+      <span>frequency</span>
+      <label for="frequency_x">x: </label>
+      <input type="range" id="frequency_x" min="20" max="200" step="0.1" value="100" />
+      <span id="frequency_x_val">100</span>
+      <span>Hz</span>
+      <label for="frequency_y">y: </label>
+      <input type="range" id="frequency_y" min="20" max="200" step="0.1" value="100" />
+      <span id="frequency_y_val">100</span>
+      <span>Hz</span>
+    </div>
+    <div>
+      <span>volume in</span>
+      <label for="volume_in_x">x: </label>
+      <input type="range" id="volume_in_x" min="0" max="100" step="1" value="100" />
+      <span id="volume_in_x_val">100</span>
+      <span>%</span>
+      <label for="volume_in_y">y: </label>
+      <input type="range" id="volume_in_y" min="0" max="100" step="1" value="100" />
+      <span id="volume_in_y_val">100</span>
+      <span>%</span>
+    </div>
+    <div>
+      <label for="volume_in">volume out: </label>
+      <span></span>
+      <input type="range" id="volume_out" min="0" max="100" step="1" value="0" />
+      <span id="volume_out_val">0</span>
+      <span>%</span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div>
+      <label for="dephase">dephase: </label>
+      <span></span>
+      <input type="range" id="dephase" min="0" max="99" step="1" value="0" />
+      <span id="dephase_val">0</span>
+      <span>%</span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div>
+      <label for="persistence">persistence: </label>
+      <span></span>
+      <input type="range" id="persistence" min="0.01" max="1" step="0.01" value="0.5" />
+      <span id="persistence_val">0.5</span>
+      <span>s</span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div>
+      <label for="points">points: </label>
+      <span></span>
+      <input type="range" id="points" min="2" max="1000" step="1" value="500" />
+      <span id="points_val">500</span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </form>
+</body>
+</html>
