@@ -11,6 +11,8 @@
   <script src="resampler.js" type="text/javascript"></script>
   <script src="resamplerCircular.js" type="text/javascript"></script>
   <script src="resamplerLinear.js" type="text/javascript"></script>
+  <script src="frameOffscreen.js" type="text/javascript"></script>
+  <script src="gridOffscreen.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -47,7 +49,11 @@ function init() {
 	var oldHeight = 0;
 
 	var p = Object.create(canvasPlot.simplePlot);
-	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
+	var frame = Object.create(canvasPlot.frameOffscreen);
+	frame.init(null);
+	var grid = Object.create(canvasPlot.gridOffscreen);
+	grid.init(null);
+	p.init(Object.create(canvasPlot.mapLinear), frame, grid, null);
 
 	p.frame.area.p.x = 0;
 	p.frame.area.p.y = 0;
