@@ -1,0 +1,563 @@
+<html>
+<head>
+  <title>canvasPlot.js oscilloscope example</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script src="mapLinear.js" type="text/javascript"></script>
+  <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <script src="curveCircular.js" type="text/javascript"></script>
+  <script src="circularBuffer.js" type="text/javascript"></script>
+  <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="resampler.js" type="text/javascript"></script>
+  <script src="resamplerCircular.js" type="text/javascript"></script>
+  <script src="resamplerLinear.js" type="text/javascript"></script>
+  <script src="frameOffscreen.js" type="text/javascript"></script>
+  <script src="gridOffscreen.js" type="text/javascript"></script>
+  <script type="text/javascript">
+function init() {
+	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+	var osc = audioCtx.createOscillator();
+	var gainIn = audioCtx.createGain();
+	var proc = audioCtx.createScriptProcessor(4096, 1, 1);
+	var gainOut = audioCtx.createGain();
+
+	osc.connect(gainIn);
+	gainIn.connect(proc);
+	proc.connect(gainOut);
+	gainOut.connect(audioCtx.destination);
+
+	var canvas = document.getElementById("canvas");
+	var form = document.getElementById("form");
+
+	var style = window.getComputedStyle(canvas);
+	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
+			 + parseFloat(style.getPropertyValue("margin-right"));
+	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
+			  + parseFloat(style.getPropertyValue("margin-bottom"));
+	style = window.getComputedStyle(form);
+	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
+	var oldWidth = 0;
+	var oldHeight = 0;
+
+	var p = Object.create(canvasPlot.simplePlot);
+	var frame = Object.create(canvasPlot.frameOffscreen);
+	frame.init(null);
+	var grid = Object.create(canvasPlot.gridOffscreen);
+	grid.init(null);
+	p.init(Object.create(canvasPlot.mapLinear), frame, grid, null);
+
+	p.frame.area.p.x = 0;
+	p.frame.area.p.y = 0;
+
+	var maxPersistence = 100;
+	var maxPoints = 100;
+	var minTime = 0.005;
+
+	var maxPersistenceSamples =
+		Math.ceil(0.001 * maxPersistence * audioCtx.sampleRate);
+	var buf = Object.create(canvasPlot.circularBuffer);
+	buf.init(new Array(maxPersistenceSamples));
+	for (var i = 0; i < maxPersistenceSamples; i++)
+		buf.buffer[i] = NaN;
+	var newSamples = 0;
+
+	proc.onaudioprocess = function(event) {
+		var in1 = event.inputBuffer.getChannelData(0);
+		var out1 = event.outputBuffer.getChannelData(0);
+		for (var i = 0; i < event.inputBuffer.length; i++)
+			out1[i] = in1[i];
+		buf.write(in1, 0, event.inputBuffer.length);
+		newSamples += i;
+	};
+
+	var curveScope = Object.create(canvasPlot.curveCircular);
+	curveScope.tmpSample = Object.create(canvasPlot.samples);
+	curveScope.tmpSample.init([NaN], [NaN]);
+	curveScope.drawPart = function (ctx, area, curveDrawer, first, last) {
+		var f = first;
+		var begun = false;
+
+		if (first > last) {
+			for (; f < this.mSamples.x.length
+			       && !isFinite(this.mSamples.x[f]); f++) ;
+
+			for (var i = f; i < this.mSamples.x.length - 1; i++) {
+				if (!isFinite(this.mSamples.x[i + 1])) {
+					curveDrawer.drawBegin(ctx, area,
+						this.lineWidth, this.lineStyle,
+						this.pointRadius);
+					curveDrawer.drawPart(this.mSamples,
+							     f, i);
+					curveDrawer.drawEnd();
+
+					for (f = i + 2;
+					     f < this.mSamples.x.length &&
+					     !isFinite(this.mSamples.x[f]);
+					     f++) ;
+					i = f - 1;
+				} else if (this.mSamples.x[i + 1]
+					   < this.mSamples.x[i]) {
+					curveDrawer.drawBegin(ctx, area,
+						this.lineWidth, this.lineStyle,
+						this.pointRadius);
+					curveDrawer.drawPart(this.mSamples,
+							     f, i);
+					this.tmpSample.x[0] = area.p2.x;
+					this.tmpSample.y[0] =
+						this.mSamples.y[i + 1];
+					curveDrawer.drawPart(this.tmpSample,
+							     0, 0);
+					curveDrawer.drawEnd();
+
+					f = i + 1;
+				}
+			}
+
+			if (f < this.mSamples.x.length) {
+				curveDrawer.drawBegin(ctx, area, this.lineWidth,
+					this.lineStyle, this.pointRadius);
+				curveDrawer.drawPart(this.mSamples, f,
+					this.mSamples.x.length - 1);
+				begun = true;
+			}
+
+			f = 0;
+		}
+
+		if (begun) {
+			if (!isFinite(this.mSamples.x[0])) {
+				curveDrawer.drawEnd();
+				begun = false;
+				f = 1;
+			} else if (this.mSamples.x[0] <
+				   this.mSamples.x[this.mSamples.x.length - 1])
+			{
+				this.tmpSample.x[0] = area.p2.x;
+				this.tmpSample.y[0] = this.mSamples.y[0];
+				curveDrawer.drawPart(this.tmpSample, 0, 0);
+				curveDrawer.drawEnd();
+				begun = false;
+			}
+		}
+
+		for (; f <= last && !isFinite(this.mSamples.x[f]); f++) ;
+
+		for (var i = f; i < last; i++) {
+			if (!isFinite(this.mSamples.x[i + 1])) {
+				if (!begun)
+					curveDrawer.drawBegin(ctx, area,
+						this.lineWidth, this.lineStyle,
+						this.pointRadius);
+				else
+					begun = false;
+				curveDrawer.drawPart(this.mSamples, f, i);
+				curveDrawer.drawEnd();
+
+				for (f = i + 2;
+				     f <= last && !isFinite(this.mSamples.x[f]);
+				     f++) ;
+				i = f - 1;
+			} else if (this.mSamples.x[i + 1] < this.mSamples.x[i]) {
+				if (!begun)
+					curveDrawer.drawBegin(ctx, area,
+						this.lineWidth, this.lineStyle,
+						this.pointRadius);
+				else
+					begun = false;
+				curveDrawer.drawPart(this.mSamples, f, i);
+				this.tmpSample.x[0] = area.p2.x;
+				this.tmpSample.y[0] = this.mSamples.y[i + 1];
+				curveDrawer.drawPart(this.tmpSample, 0, 0);
+				curveDrawer.drawEnd();
+
+				f = i + 1;
+			}
+		}
+
+		if (f <= last) {
+			if (!begun)
+				curveDrawer.drawBegin(ctx, area, this.lineWidth,
+					this.lineStyle, this.pointRadius);
+			curveDrawer.drawPart(this.mSamples, f, last);
+			curveDrawer.drawEnd();
+		}
+	};
+
+	var samples = Object.create(canvasPlot.samples);
+	var samplesLength = Math.ceil(maxPersistence * maxPoints / minTime);
+	samples.init(new Array(samplesLength), new Array(samplesLength));
+	p.curves[0] = Object.create(curveScope);
+	p.curves[0].init(samples, null);
+	for (var i = 0; i < samples.x.length; i++)
+		samples.x[i] = samples.y[i] = p.curves[0].mSamples.x[i] =
+			p.curves[0].mSamples.y[i] = NaN;
+
+	var resampler = Object.create(canvasPlot.resamplerLinear);
+	resampler.init();
+
+	function setValElement(name) {
+		var elem = document.getElementById(name);
+		elem.valElement = document.getElementById(name + "_val");
+		if (elem.valElement.innerHTML != elem.value)
+			elem.valElement.innerHTML = elem.value;
+		return elem;
+	}
+	var frequency_elem = setValElement("frequency");
+	var volume_in_elem = setValElement("volume_in");
+	var volume_out_elem = setValElement("volume_out");
+	var trigger_level_elem = setValElement("trigger_level");
+	var time_elem = setValElement("time");
+	var persistence_elem = setValElement("persistence");
+	var points_elem = setValElement("points");
+
+	osc.frequency.value = parseFloat(frequency_elem.value);
+	gainIn.gain.value = parseFloat(volume_in_elem.value) * 0.01;
+	gainOut.gain.value = parseFloat(volume_out_elem.value) * 0.01;
+	var trigger_level = parseFloat(trigger_level_elem.value);
+	var time = parseFloat(time_elem.value);
+	var persistence = Math.ceil(0.001 * parseFloat(persistence_elem.value)
+				    * audioCtx.sampleRate);
+	var points = parseInt(points_elem.value);
+	resampler.stepRatio = audioCtx.sampleRate * (0.001 * time)
+			       / (points - 1);
+	resampler.update();
+	var persistenceOutSamples =
+		Math.ceil(persistence / resampler.stepRatio);
+
+	function waveform_change () {
+		osc.type = this.value;
+	}
+	var waveform_elems = document.getElementsByName("waveform");
+	for (var i = 0; i < waveform_elems.length; i++) {
+		waveform_elems[i].addEventListener("change", waveform_change);
+		if (waveform_elems[i].checked)
+			osc.type = waveform_elems[i].value;
+	}
+
+	var trigger;
+	function trigger_change () {
+		trigger = this.value;
+	}
+	var trigger_elems = document.getElementsByName("trigger");
+	for (var i = 0; i < trigger_elems.length; i++) {
+		trigger_elems[i].addEventListener("change", trigger_change);
+		if (trigger_elems[i].checked)
+			trigger = trigger_elems[i].value;
+	}
+
+	p.map.xRange.min = 0.0;
+	p.map.xRange.max = time;
+	p.map.yRange.min = -1.0;
+	p.map.yRange.max = 1.0;
+
+	p.grid.tics = Array(18);
+	var xtic = Object.create(canvasPlot.tic);
+	xtic.direction = canvasPlot.direction.vertical;
+	var ytic = Object.create(canvasPlot.tic);
+	ytic.direction = canvasPlot.direction.horizontal;
+
+	var i = 0;
+	var k = 0.1 * time;
+	for (var v = k; i < 9; i++, v += k) {
+		p.grid.tics[i] = Object.create(xtic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+	for (var v = -0.8; i < 18; i++, v += 0.2) {
+		p.grid.tics[i] = Object.create(ytic);
+		p.grid.tics[i].init();
+		p.grid.tics[i].value = v;
+	}
+
+	function input() {
+		if (this.valElement.innerHTML == this.value)
+			return;
+		this.valElement.innerHTML = this.value;
+
+		switch (this) {
+			case frequency_elem:
+				osc.frequency.value = parseFloat(this.value);
+				break;
+			case volume_in_elem:
+				gainIn.gain.value = parseFloat(this.value)
+						    * 0.01;
+				break;
+			case volume_out_elem:
+				gainOut.gain.value = parseFloat(this.value)
+						     * 0.01;
+				break;
+			case trigger_level_elem:
+				trigger_level = parseFloat(this.value);
+				break;
+			case time_elem:
+				time = parseFloat(time_elem.value);
+				var k = 0.1 * time;
+				for (var i = 0, v = k;
+				     i < 9; i++, v += k)
+					p.grid.tics[i].value = v;
+				p.map.xRange.max = time;
+				p.map.update(p.frame.innerArea);
+				p.grid.update(p.map);
+				resampler.stepRatio = audioCtx.sampleRate
+						      * (0.001 * time)
+						      / (points - 1);
+				persistenceOutSamples =
+					Math.ceil(persistence
+						  / resampler.stepRatio);
+				break;
+			case persistence_elem:
+				persistence = Math.ceil(0.001
+					* parseFloat(persistence_elem.value)
+					* audioCtx.sampleRate);
+				persistenceOutSamples =
+					Math.ceil(persistence
+						  / resampler.stepRatio);
+				break;
+			case points_elem:
+				points = parseInt(points_elem.value);
+				resampler.stepRatio = audioCtx.sampleRate
+						      * (0.001 * time)
+						      / (points - 1);
+				persistenceOutSamples =
+					Math.ceil(persistence
+						  / resampler.stepRatio);
+				break;
+		}
+	}
+	frequency_elem.addEventListener("input", input);
+	volume_in_elem.addEventListener("input", input);
+	volume_out_elem.addEventListener("input", input);
+	trigger_level_elem.addEventListener("input", input);
+	time_elem.addEventListener("input", input);
+	persistence_elem.addEventListener("input", input);
+	points_elem.addEventListener("input", input);
+
+	osc.start();
+
+	var drawer = Object.create(canvasPlot.curveDrawerLinear);
+
+	var ctx = canvas.getContext("2d");
+
+	var rw = { nextIn: 0, readIn: 0, firstOut: 0, nextOut: 0,
+		   writtenOut: 0, persistenceCur: 0 };
+
+	function draw() {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		p.grid.draw(ctx, p.frame.innerArea);
+		if (rw.persistenceCur > 0) {
+			var last = rw.firstOut + persistenceOutSamples - 1;
+			if (last > p.curves[0].samples.x.length)
+				last -= p.curves[0].samples.x.length;
+			p.curves[0].drawPart(ctx, p.frame.innerArea, drawer,
+					     rw.firstOut, last);
+		}
+		p.frame.draw(ctx);
+	}
+
+	var oldRatio = resampler.stepRatio;
+	var oldTime = time;
+	var stepT = time / (points - 1);
+	var maxT = time - stepT;
+	var prevT = maxT;
+	var prevY = NaN;
+	var triggerWaiting = true;
+	function updateDraw() {
+		requestAnimationFrame(updateDraw);
+
+		if (newSamples > buf.buffer.length
+		    || oldRatio != resampler.stepRatio
+		    || oldTime != time) {
+			resampler.update();
+			newSamples = buf.buffer.length;
+			if (oldRatio != resampler.stepRatio || oldTime != time)
+				for (var i = 0;
+				     i < p.curves[0].mSamples.x.length; i++)
+					p.curves[0].mSamples.x[i] =
+						p.curves[0].mSamples.y[i] = NaN;
+			oldRatio = resampler.stepRatio;
+			oldTime = time;
+			stepT = time / (points - 1);
+			maxT = time - stepT;
+			prevT = maxT;
+			prevY = NaN;
+			triggerWaiting = true;
+		}
+
+		if (newSamples <= 0)
+			return;
+
+		var firstIn = buf.index - newSamples;
+		if (firstIn < 0)
+			firstIn += buf.buffer.length;
+		var firstOut = rw.nextOut;
+
+		resampler.processCircular(buf.buffer, samples.y, firstIn,
+					  firstOut, newSamples, rw);
+
+		newSamples -= rw.readIn;
+
+		if (trigger == "off") {
+			var i = firstOut;
+			if (rw.nextOut <= firstOut) {
+				for (; i < samples.x.length; i++) {
+					prevT = prevT >= maxT
+						? 0.0 : prevT + stepT;
+					samples.x[i] = prevT;
+				}
+				i = 0;
+			}
+			for (; i < rw.nextOut; i++) {
+				prevT = prevT >= maxT ? 0.0 : prevT + stepT;
+				samples.x[i] = prevT;
+			}
+		} else {
+			var i = firstIn;
+			if (rw.nextOut <= firstOut) {
+				for (; i < samples.x.length; i++) {
+					if (!triggerWaiting) {
+						prevT += stepT;
+						samples.x[i] = prevT;
+						if (prevT >= maxT)
+							triggerWaiting = true;
+					} else if ((trigger == "up"
+						    && prevY <= trigger_level
+						    && samples.y[i]
+						    > trigger_level)
+						   || (trigger == "down"
+						       && prevY >= trigger_level
+						       && samples.y[i]
+						       < trigger_level)) {
+						samples.x[i] = 0;
+						prevT = 0;
+						triggerWaiting = false;
+					} else
+						samples.x[i] = NaN;
+					prevY = samples.y[i];
+				}
+			}
+			for (; i < rw.nextOut; i++) {
+				if (!triggerWaiting) {
+					prevT += stepT;
+					samples.x[i] = prevT;
+					if (prevT >= maxT)
+						triggerWaiting = true;
+				} else if ((trigger == "up"
+					    && prevY <= trigger_level
+					    && samples.y[i] > trigger_level)
+					   || (trigger == "down"
+					       && prevY >= trigger_level
+					       && samples.y[i] < trigger_level))
+				{
+					samples.x[i] = 0;
+					prevT = 0;
+					triggerWaiting = false;
+				} else
+					samples.x[i] = NaN;
+				prevY = samples.y[i];
+			}
+		}
+
+
+		// reusing rw.firstOut for drawing
+		rw.firstOut = rw.nextOut - persistenceOutSamples;
+		if (rw.firstOut < 0)
+			rw.firstOut += samples.x.length;
+
+		p.curves[0].updatePart(p.map, rw.firstOut,
+				       persistenceOutSamples);
+		rw.persistenceCur = persistenceOutSamples;
+
+		draw();
+	}
+
+	function resize() {
+		var r = canvas.parentNode.getBoundingClientRect();
+		if (r.width == oldWidth && r.height == oldHeight)
+			return;
+		oldWidth = r.width;
+		oldHeight = r.height;
+
+		var xHeight = leaveHeight
+			      + parseFloat(style.getPropertyValue("height"));
+
+		canvas.width = r.width - leaveWidth;
+		canvas.height = r.height - xHeight;
+
+		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
+		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+
+		p.frame.area.width = canvas.width;
+		p.frame.area.height = canvas.height;
+
+		p.update(true, true);
+
+		draw();
+	}
+	resize();
+	window.addEventListener("resize", resize);
+
+	updateDraw();
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <form id="form">
+    <div>
+      <label>waveform: </label>
+      <input type="radio" name="waveform" value="sine" checked> sine
+      <input type="radio" name="waveform" value="sawtooth"> sawtooth
+      <input type="radio" name="waveform" value="square"> square
+      <input type="radio" name="waveform" value="triangle"> triangle
+    </div>
+    <div>
+      <label for="frequency">frequency: </label>
+      <input type="range" id="frequency" min="20" max="20000" step="0.1" value="440" />
+      <span id="frequency_val">440</span>
+      <span>Hz</span>
+    </div>
+    <div>
+      <label for="volume_in">volume in: </label>
+      <input type="range" id="volume_in" min="0" max="100" step="1" value="100" />
+      <span id="volume_in_val">100</span>
+      <span>%</span>
+    </div>
+    <div>
+      <label for="volume_out">volume out: </label>
+      <input type="range" id="volume_out" min="0" max="100" step="1" value="0" />
+      <span id="volume_out_val">0</span>
+      <span>%</span>
+    </div>
+    <div>
+      <label>trigger: </label>
+      <input type="radio" name="trigger" value="off" checked> off
+      <input type="radio" name="trigger" value="up"> up
+      <input type="radio" name="trigger" value="down"> down
+    </div>
+    <div>
+      <label for="trigger_level">trigger level: </label>
+      <input type="range" id="trigger_level" min="-1" max="1" step="0.01" value="0" />
+      <span id="trigger_level_val">0</span>
+    </div>
+    <div>
+      <label for="time">time: </label>
+      <input type="range" id="time" min="0.005" max="1000" step="0.001" value="2.27" />
+      <span id="time_val">2.27</span>
+      <span>ms</span>
+    </div>
+    <div>
+      <label for="persistence">persistence: </label>
+      <input type="range" id="persistence" min="0.005" max="100" step="0.001" value="2.27" />
+      <span id="persistence_val">2.27</span>
+      <span>ms</span>
+    </div>
+    <div>
+      <label for="points">points: </label>
+      <input type="range" id="points" min="2" max="100" step="1" value="100" />
+      <span id="points_val">100</span>
+    </div>
+  </form>
+</body>

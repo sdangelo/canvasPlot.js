@@ -242,16 +242,18 @@ function init() {
 	var ctx = canvas.getContext("2d");
 
 	var rw = { nextIn: 0, readIn: 0, firstOut: 0, nextOut: 0,
-		   writtenOut: 0 };
+		   writtenOut: 0, persistenceCur: 0 };
 
 	function draw() {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		p.grid.draw(ctx, p.frame.innerArea);
-		var last = rw.firstOut + persistenceOutSamples - 1;
-		if (last > p.curves[0].samples.x.length)
-			last -= p.curves[0].samples.x.length;
-		p.curves[0].drawPart(ctx, p.frame.innerArea, drawer,
-				     rw.firstOut, last);
+		if (rw.persistenceCur > 0) {
+			var last = rw.firstOut + persistenceOutSamples - 1;
+			if (last > p.curves[0].samples.x.length)
+				last -= p.curves[0].samples.x.length;
+			p.curves[0].drawPart(ctx, p.frame.innerArea, drawer,
+					     rw.firstOut, last);
+		}
 		p.frame.draw(ctx);
 	}
 
@@ -263,7 +265,7 @@ function init() {
 		    || oldRatio != resampler1.stepRatio) {
 			resampler1.update();
 			resampler2.update();
-			newSamples = buf1.buffer.length
+			newSamples = buf1.buffer.length;
 			if (oldRatio != resampler1.stepRatio)
 				for (var i = 0;
 				     i < p.curves[0].mSamples.x.length; i++)
@@ -293,6 +295,7 @@ function init() {
 			rw.firstOut += samples.x.length;
 		p.curves[0].updatePart(p.map, rw.firstOut,
 				       persistenceOutSamples);
+		rw.persistenceCur = persistenceOutSamples;
 
 		draw();
 	}

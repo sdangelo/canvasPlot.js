@@ -35,7 +35,7 @@ canvasPlot.curveCircular.drawPart = function (ctx, area, curveDrawer,
 canvasPlot.curveCircular.updatePart = function (map, first, count) {
 	var l1 = this.samples.x.length - first;
 	var l2 = count - l1;
-	if (l2 >= 0) {
+	if (l2 > 0) {
 		map.mapPoints(this.samples.x, this.samples.y, this.mSamples.x,
 			      this.mSamples.y, first, first, first, first, l1);
 		map.mapPoints(this.samples.x, this.samples.y, this.mSamples.x,

@@ -17,7 +17,7 @@
 canvasPlot.resamplerLinear = Object.create(canvasPlot.resampler);
 
 canvasPlot.resamplerLinear.prev = NaN;
-canvasPlot.resamplerLinear.offset = 0.0;
+canvasPlot.resamplerLinear.offset = NaN;
 
 canvasPlot.resamplerLinear.update = function () {
 	this.prev = NaN;

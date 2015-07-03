@@ -7,4 +7,5 @@ I am too lazy to explain hows and whys, just take a look at the example files:
 * circularPlot.html - circular buffer and plotting;
 * circularResample.html - circular linear resampler;
 * spectrum.html - spectrum analyzer;
-* XYScope.html - XY oscilloscope.
+* XYScope.html - XY oscilloscope;
+* scope.html - oscilloscope.
