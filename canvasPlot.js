@@ -14,7 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Core API ***/
+
 var canvasPlot = {
+
+	/* Basic self-explaining definitions */
+
 	direction: {
 		horizontal:	1,
 		vertical:	2
@@ -30,7 +35,36 @@ var canvasPlot = {
 		max:	NaN
 	},
 
+	/* Now we need to talk a little bit about these...
+	 *
+	 * Here we use prototype inheritance heavily. If you are not familiar
+	 * with it, go study it first before using this library.
+	 *
+	 * From the outside, object members can be read/write or read-only.
+	 *
+	 * init() functions are meant to create the members of an object, but
+	 * not to initialize it. They often accept parameters for the user to
+	 * supply himself said members if he prefers to do so.
+	 *
+	 * update() functions update read-only and private members using current
+	 * read/write member values and supplied arguments.
+	 *
+	 * draw() functions always require a ctx argument, which is the drawing
+	 * context.
+	 *
+	 * Usually the usage pattern is like:
+	 *  1. create a new object using Object.create();
+	 *  2. init() the object;
+	 *  3. setup the object by writing read/write members;
+	 *  4. update();
+	 *  5. do something with the object (e.g., draw());
+	 *  6. repeat 3 and 4, and/or 5 ad libitum.
+	 */
+
+	/* Set of samples. */
 	samples: {
+		/* Read/write coordinates. They are meant to be two arrays
+		 * of same length. */
 		x:	null,
 		y:	null,
 
@@ -40,12 +74,15 @@ var canvasPlot = {
 		}
 	},
 
+	/* Rectangular area. */
 	area: {
-		p:	null,
+		/* Read/write members. */
+		p:	null,	// Top-left point (inside the area)
 		width:	NaN,
 		height: NaN,
 
-		p2:	null,
+		/* Read-only. */
+		p2:	null,	// Bottom-right point (outside the area)
 
 		init: function (p) {
 			this.p = p ? p : Object.create(this.p);
@@ -57,13 +94,18 @@ var canvasPlot = {
 			this.p2.y = this.p.y + this.height;
 		},
 
+		/* Whether the area contains the point (x, y). lx, tx, rx, and
+		 * bx are, respectively, extra left, top, right, and bottom
+		 * margins. */
 		contains: function (x, y, lx, tx, rx, bx) {
 			return x >= (this.p.x - lx) && x < (this.p2.x + rx)
 			       && y >= (this.p.y - tx) && y < (this.p2.y + bx);
 		}
 	},
 
+	/* Prototype for coordinate-mapping objects. */
 	map: {
+		/* Read/write input ranges. */
 		xRange:		null,
 		yRange:		null,
 
@@ -74,14 +116,23 @@ var canvasPlot = {
 					     : Object.create(this.yRange);
 		},
 
+		/* area is the output rectangular area. */
 		update: function (area) {
 		},
 
+		/* Stores into m the mapping of the point with input coordinates
+		 * (x, y). */
 		mapPoint: function (x, y, m) {
 			m.x = NaN;
 			m.y = NaN;
 		},
 
+		/* Maps the points with input coordinates stored into the arrays
+		 * x and y, and writes the output coordinates into the mx and my
+		 * arrays.
+		 * xFirst, yFirst, mxFirst, and myFirst represent the indices of
+		 * the first coordinate to map for each array.
+		 * count is the number of points to map. */
 		mapPoints: function (x, y, mx, my, xFirst, yFirst,
 				     mxFirst, myFirst, count) {
 			for (var i = 0; i < count; i++) {
@@ -91,14 +142,16 @@ var canvasPlot = {
 		}
 	},
 
+	/* Plot frame. */
 	frame: {
-		area:		null,
+		/* Read/write members. */
+		area:		null,	// Area delimiting the frame
+		borderWidth:	2,	// Drawing context lineWidth
+		borderStyle:	"#000", // Drawing context strokeStyle
 
-		borderWidth:	2,
-		borderStyle:	"#000",
-
-		strokeArea:	null,
-		innerArea:	null,
+		/* Read-only members. */
+		strokeArea:	null,	// area shrinked by half the borderWidth
+		innerArea:	null,	// area shrinked by the borderWidth
 
 		init: function (area) {
 			if (area)
@@ -146,22 +199,25 @@ var canvasPlot = {
 		}
 	},
 
+	/* Grid tic. */
 	tic: {
-		value:		NaN,
-		direction:	NaN,
+		/* Read/write members. */
+		value:		NaN,	// Non-mapped value
+		direction:	NaN,	
+		lineWidth:	1,	// Drawing context lineWidth
+		lineStyle:	"#ccc",	// Drawing context strokeStyle
 
-		lineWidth:	1,
-		lineStyle:	"#ccc",
-
-		toDraw:		false,
-		p1:		null,
-		p2:		null,
+		/* Read-only members. */
+		toDraw:		false,	// Whether the value is in range
+		p1:		null,	// Start drawing point
+		p2:		null,	// End drawing point
 
 		init: function () {
 			this.p1 = Object.create(this.p1);
 			this.p2 = Object.create(this.p2);
 		},
 
+		/* map is the coordinate-mapping object. */
 		update: function (map) {
 			if (this.direction == 1 /* direction.horizontal */) {
 				if (this.value >= map.yRange.min
@@ -188,6 +244,7 @@ var canvasPlot = {
 				this.toDraw = false;
 		},
 
+		/* area is the drawing area. */
 		draw: function (ctx, area) {
 			if (!this.toDraw)
 				return;
@@ -211,72 +268,103 @@ var canvasPlot = {
 		}
 	},
 
+	/* Plot grid. */
 	grid: {
+		/* Read/write array of tics that make the grid. */
 		tics:	null,
 
 		init: function (tics) {
 			this.tics = tics ? tics : [];
 		},
 
+		/* map is the coordinate-mapping object. */
 		update: function (map) {
 			for (var i = 0; i < this.tics.length; i++)
 				this.tics[i].update(map);
 		},
 
+		/* area is the drawing area. */
 		draw: function (ctx, area) {
 			for (var i = 0; i < this.tics.length; i++)
 				this.tics[i].draw(ctx, area);
 		},
 	},
 
+	/* Prototype for curve-drawing objects. */
 	curveDrawer: {
+		/* Begins drawing a curve.
+		 * ctx is the drawing context.
+		 * area is the drawing area.
+		 * lineWidth is the drawing context lineWidth.
+		 * lineStyle is the drawing context strokeStyle.
+		 * pointRadius is the radius of isolated points. */
 		drawBegin: function (ctx, area, lineWidth, lineStyle,
 				     pointRadius) {
 		},
 
+		/* Draws part of a curve.
+		 * mSamples is a sample object containing mapped coordinates.
+		 * first is the index of the first sample to draw.
+		 * last is the index of the last sample to draw. */
 		drawPart: function (mSamples, first, last) {
 		},
 
+		/* Ends drawing a curve. */
 		drawEnd: function () {
 		}
 	},
 
+	/* Curve. */
 	curve: {
-		samples:	null,
-		mSamples:	null,
-
-		lineWidth:	2,
-		lineStyle:	"#0f0",
-
-		pointRadius:	4,
+		/* Read/write members. */
+		samples:	null,	// sample object containing non-mapped
+					// coordinates
+		mSamples:	null,	// sample object containing mapped
+					// coordinates
+		lineWidth:	2,	// Drawing context lineWidth
+		lineStyle:	"#0f0",	// Drawing context strokeStyle
+		pointRadius:	4,	// Radius of isolated points
 
 		init: function (samples, mSamples) {
 			this.samples = samples ? samples
 					       : Object.create(this.samples);
 			this.mSamples = mSamples ? mSamples
-					       : Object.create(this.samples);
+					       : Object.create(this.mSamples);
 			if (samples && !mSamples) {
-				this.mSamples.init(Array(this.samples.x.length),
-					Array(this.samples.y.length));
+				this.mSamples.init(
+					new Array(this.samples.x.length),
+					new Array(this.samples.y.length));
 			} else if (!samples && mSamples) {
-				this.samples.init(Array(this.mSamples.x.length),
-					Array(this.mSamples.y.length));
+				this.samples.init(
+					new Array(this.mSamples.x.length),
+					new Array(this.mSamples.y.length));
 			} else if (!samples && !mSamples) {
 				this.samples.init(null, null);
 				this.mSamples.init(null, null);
 			}
 		},
 
+		/* Updates part of the curve.
+		 * map is the coordinate-mapping object.
+		 * first is the index of the first sample to update.
+		 * count is the number of samples to update. */
 		updatePart: function (map, first, count) {
 			map.mapPoints(this.samples.x, this.samples.y,
 				      this.mSamples.x, this.mSamples.y,
 				      first, first, first, first, count);
 		},
 
+		/* map is the coordinate-mapping object. */
 		update: function (map) {
 			this.updatePart(map, 0, this.samples.x.length);
 		},
 
+		/* Draws part of the curve.
+		 * ctx is the drawing context.
+		 * area is the drawing area.
+		 * curveDrawer is the curve-drawing object.
+		 * first is the index of the first sample to draw.
+		 * last is the index of the last sample to draw. */
 		drawPart: function (ctx, area, curveDrawer, first, last) {
 			curveDrawer.drawBegin(ctx, area, this.lineWidth,
 					      this.lineStyle, this.pointRadius);
@@ -284,12 +372,16 @@ var canvasPlot = {
 			curveDrawer.drawEnd();
 		},
 
+		/* area is the drawing area.
+		 * curveDrawer is the curve-drawing object. */
 		draw: function (ctx, area, curveDrawer) {
 			this.drawPart(ctx, area, curveDrawer,
 				      0, this.samples.x.length - 1);
 		}
 	}
 };
+
+/* The necessary bookkepping. */
 
 canvasPlot.area.p = Object.create(canvasPlot.point);
 canvasPlot.area.p2 = Object.create(canvasPlot.point);

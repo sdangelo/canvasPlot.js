@@ -8,11 +8,13 @@
   <script src="curveCircular.js" type="text/javascript"></script>
   <script src="circularBuffer.js" type="text/javascript"></script>
   <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="frameOffscreen.js" type="text/javascript"></script>
+  <script src="gridOffscreen.js" type="text/javascript"></script>
+  <script src="simplePlotOffscreen.js" type="text/javascript"></script>
+  <script src="canvasStretch.js" type="text/javascript"></script>
   <script src="resampler.js" type="text/javascript"></script>
   <script src="resamplerCircular.js" type="text/javascript"></script>
   <script src="resamplerLinear.js" type="text/javascript"></script>
-  <script src="frameOffscreen.js" type="text/javascript"></script>
-  <script src="gridOffscreen.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -30,22 +32,8 @@ function init() {
 	var canvas = document.getElementById("canvas");
 	var form = document.getElementById("form");
 
-	var style = window.getComputedStyle(canvas);
-	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
-			 + parseFloat(style.getPropertyValue("margin-right"));
-	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
-			  + parseFloat(style.getPropertyValue("margin-bottom"));
-	style = window.getComputedStyle(form);
-	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
-	var oldWidth = 0;
-	var oldHeight = 0;
-
-	var p = Object.create(canvasPlot.simplePlot);
-	var frame = Object.create(canvasPlot.frameOffscreen);
-	frame.init(null);
-	var grid = Object.create(canvasPlot.gridOffscreen);
-	grid.init(null);
-	p.init(Object.create(canvasPlot.mapLinear), frame, grid, null);
+	var p = Object.create(canvasPlot.simplePlotOffscreen);
+	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
 
 	p.frame.area.p.x = 0;
 	p.frame.area.p.y = 0;
@@ -57,7 +45,7 @@ function init() {
 	var maxPersistenceSamples =
 		Math.ceil(0.001 * maxPersistence * audioCtx.sampleRate);
 	var buf = Object.create(canvasPlot.circularBuffer);
-	buf.init(new Array(maxPersistenceSamples));
+	buf.init(new Float32Array(maxPersistenceSamples));
 	for (var i = 0; i < maxPersistenceSamples; i++)
 		buf.buffer[i] = NaN;
 	var newSamples = 0;
@@ -186,7 +174,8 @@ function init() {
 
 	var samples = Object.create(canvasPlot.samples);
 	var samplesLength = Math.ceil(maxPersistence * maxPoints / minTime);
-	samples.init(new Array(samplesLength), new Array(samplesLength));
+	samples.init(new Float32Array(samplesLength),
+		     new Float32Array(samplesLength));
 	p.curves[0] = Object.create(curveScope);
 	p.curves[0].init(samples, null);
 	for (var i = 0; i < samples.x.length; i++)
@@ -221,6 +210,7 @@ function init() {
 	var points = parseInt(points_elem.value);
 	resampler.stepRatio = audioCtx.sampleRate * (0.001 * time)
 			       / (points - 1);
+	resampler.offset = 0.0;
 	resampler.update();
 	var persistenceOutSamples =
 		Math.ceil(persistence / resampler.stepRatio);
@@ -368,6 +358,7 @@ function init() {
 		if (newSamples > buf.buffer.length
 		    || oldRatio != resampler.stepRatio
 		    || oldTime != time) {
+			resampler.offset = 0.0;
 			resampler.update();
 			newSamples = buf.buffer.length;
 			if (oldRatio != resampler.stepRatio || oldTime != time)
@@ -472,25 +463,12 @@ function init() {
 	}
 
 	function resize() {
-		var r = canvas.parentNode.getBoundingClientRect();
-		if (r.width == oldWidth && r.height == oldHeight)
-			return;
-		oldWidth = r.width;
-		oldHeight = r.height;
-
-		var xHeight = leaveHeight
-			      + parseFloat(style.getPropertyValue("height"));
-
-		canvas.width = r.width - leaveWidth;
-		canvas.height = r.height - xHeight;
-
-		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
-		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+		canvasPlot.canvasStretch(canvas, null);
 
 		p.frame.area.width = canvas.width;
 		p.frame.area.height = canvas.height;
 
-		p.update(true, true);
+		p.update(true);
 
 		draw();
 	}
@@ -504,7 +482,9 @@ window.addEventListener("load", init);
   </script>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="canvas">
+    <canvas id="canvas"></canvas>
+  </div>
   <form id="form">
     <div>
       <label>waveform: </label>

@@ -6,6 +6,10 @@
   <script src="mapSemiLogX.js" type="text/javascript"></script>
   <script src="curveDrawerLinear.js" type="text/javascript"></script>
   <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="frameOffscreen.js" type="text/javascript"></script>
+  <script src="gridOffscreen.js" type="text/javascript"></script>
+  <script src="simplePlotOffscreen.js" type="text/javascript"></script>
+  <script src="canvasStretch.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -23,17 +27,7 @@ function init() {
 	var canvas = document.getElementById("canvas");
 	var form = document.getElementById("form");
 
-	var style = window.getComputedStyle(canvas);
-	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
-			 + parseFloat(style.getPropertyValue("margin-right"));
-	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
-			  + parseFloat(style.getPropertyValue("margin-bottom"));
-	style = window.getComputedStyle(form);
-	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
-	var oldWidth = 0;
-	var oldHeight = 0;
-
-	var p = Object.create(canvasPlot.simplePlot);
+	var p = Object.create(canvasPlot.simplePlotOffscreen);
 	p.init(Object.create(canvasPlot.mapSemiLogX), null, null, null);
 
 	p.frame.area.p.x = 0;
@@ -74,7 +68,7 @@ function init() {
 	}
 
 	var buffer = new Float32Array(analyser.frequencyBinCount);
-	var x = new Array(buffer.length);
+	var x = new Float32Array(buffer.length);
 	var step = 0.5 * audioCtx.sampleRate / x.length;
 	for (var i = 0; i < x.length; i++)
 		x[i] = step * i;
@@ -145,33 +139,23 @@ function init() {
 
 	function updateDraw() {
 		requestAnimationFrame(updateDraw);
+
 		analyser.getFloatFrequencyData(buffer);
 		for (var i = 0; i < buffer.length; i++)
 			buffer[i] += analyser.maxDecibels;
-		p.update(false, true);
+
+		p.curves[0].update(p.map);
+
 		draw();
 	}
 
 	function resize() {
-		var r = canvas.parentNode.getBoundingClientRect();
-		if (r.width == oldWidth && r.height == oldHeight)
-			return;
-		oldWidth = r.width;
-		oldHeight = r.height;
-
-		var xHeight = leaveHeight
-			      + parseFloat(style.getPropertyValue("height"));
-
-		canvas.width = r.width - leaveWidth;
-		canvas.height = r.height - xHeight;
-
-		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
-		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+		canvasPlot.canvasStretch(canvas, null);
 
 		p.frame.area.width = canvas.width;
 		p.frame.area.height = canvas.height;
 
-		p.update(true, true);
+		p.update(true);
 
 		draw();
 	}
@@ -185,7 +169,9 @@ window.addEventListener("load", init);
   </script>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="canvas">
+    <canvas id="canvas"></canvas>
+  </div>
   <form id="form">
     <div>
       <label>waveform: </label>

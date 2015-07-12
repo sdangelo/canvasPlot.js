@@ -7,6 +7,10 @@
   <script src="curveDrawerLinear.js" type="text/javascript"></script>
   <script src="curveCircular.js" type="text/javascript"></script>
   <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="frameOffscreen.js" type="text/javascript"></script>
+  <script src="gridOffscreen.js" type="text/javascript"></script>
+  <script src="simplePlotOffscreen.js" type="text/javascript"></script>
+  <script src="canvasStretch.js" type="text/javascript"></script>
   <script src="resampler.js" type="text/javascript"></script>
   <script src="resamplerCircular.js" type="text/javascript"></script>
   <script src="resamplerLinear.js" type="text/javascript"></script>
@@ -15,17 +19,7 @@ function init() {
 	var canvas = document.getElementById("canvas");
 	var form = document.getElementById("form");
 
-	var style = window.getComputedStyle(canvas);
-	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
-			 + parseFloat(style.getPropertyValue("margin-right"));
-	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
-			  + parseFloat(style.getPropertyValue("margin-bottom"));
-	style = window.getComputedStyle(form);
-	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
-	var oldWidth = 0;
-	var oldHeight = 0;
-
-	var p = Object.create(canvasPlot.simplePlot);
+	var p = Object.create(canvasPlot.simplePlotOffscreen);
 	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
 
 	p.frame.area.p.x = 0;
@@ -54,10 +48,10 @@ function init() {
 		p.grid.tics[i].value = v;
 	}
 
-	var x_in = Array(100);
-	var y_in = Array(100);
-	var x_out = Array(100);
-	var y_out = Array(100);
+	var x_in = new Float32Array(100);
+	var y_in = new Float32Array(100);
+	var x_out = new Float32Array(100);
+	var y_out = new Float32Array(100);
 
 	var r = Object.create(canvasPlot.resamplerLinear);
 	r.init();
@@ -83,6 +77,7 @@ function init() {
 		x_fill(x_out, first_out, n_out);
 
 		r.stepRatio = (n_in - 1.0) / (n_out - 1.0);
+		r.offset = 0.0;
 		r.update();
 
 		for (var j = 0; j < y_out.length; j++)
@@ -203,7 +198,9 @@ function init() {
 			update_out(n_in, n_out, step, first_in, first_out);
 		}
 
-		p.update(false, false);
+		p.curves[0].update(p.map);
+		p.curves[1].update(p.map);
+
 		draw(first_in, (first_in + n_in - 1) % y_in.length,
 		     first_out, (first_out + n_out - 1) % y_out.length);
 	}
@@ -214,20 +211,7 @@ function init() {
 	first_out_elem.addEventListener("input", input);
 
 	function resize() {
-		var r = canvas.parentNode.getBoundingClientRect();
-		if (r.width == oldWidth && r.height == oldHeight)
-			return;
-		oldWidth = r.width;
-		oldHeight = r.height;
-
-		var xHeight = leaveHeight
-			      + parseFloat(style.getPropertyValue("height"));
-
-		canvas.width = r.width - leaveWidth;
-		canvas.height = r.height - xHeight;
-
-		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
-		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+		canvasPlot.canvasStretch(canvas, null);
 
 		p.frame.area.width = canvas.width;
 		p.frame.area.height = canvas.height;
@@ -236,7 +220,9 @@ function init() {
 		var n_out = parseInt(n_out_elem.value);
 		var first_in = parseInt(first_in_elem.value);
 		var first_out = parseInt(first_out_elem.value);
-		p.update(true, true);
+
+		p.update(true);
+
 		draw(first_in, (first_in + n_in - 1) % y_in.length,
 		     first_out, (first_out + n_out - 1) % y_out.length);
 	}
@@ -248,7 +234,9 @@ window.addEventListener("load", init);
   </script>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="canvas">
+    <canvas id="canvas"></canvas>
+  </div>
   <form id="form">
     <div>
       <label for="n_in">input samples: </label>

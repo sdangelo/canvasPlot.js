@@ -14,6 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Circular-array-based curve-drawing API ***/
+
+/* Analogous of canvasPlot.curveDrawer.drawPart() for circular sample arrays
+ * (curves' mSamples).
+ * last may be smaller than first. */
 canvasPlot.curveDrawer.drawPartCircular = function (mSamples, first, last) {
 	if (first > last) {
 		this.drawPart(mSamples, first, mSamples.x.length - 1);
@@ -21,6 +26,8 @@ canvasPlot.curveDrawer.drawPartCircular = function (mSamples, first, last) {
 	} else
 		this.drawPart(mSamples, first, last);
 };
+
+/*** Circular-array-based (samples and mSamples) curve object. ***/
 
 canvasPlot.curveCircular = Object.create(canvasPlot.curve);
 

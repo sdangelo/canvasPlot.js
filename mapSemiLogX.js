@@ -14,8 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Semi-log coordinate-mapping object with x logarithmic and y linear. ***/
+
 canvasPlot.mapSemiLogX = Object.create(canvasPlot.map);
 
+/* Private members. */
 canvasPlot.mapSemiLogX.kx0 = NaN;
 canvasPlot.mapSemiLogX.kx1 = NaN;
 canvasPlot.mapSemiLogX.ky0 = NaN;

@@ -14,9 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-canvasPlot.frameOffscreen = Object.create(canvasPlot.frame);
-canvasPlot.frameOffscreen.super = canvasPlot.frame;
+/*** Offscreen-rendered plot frame object. ***/
 
+canvasPlot.frameOffscreen = Object.create(canvasPlot.frame);
+
+/* Private members. */
+canvasPlot.frameOffscreen.super = canvasPlot.frame;
 canvasPlot.frameOffscreen.canvas = null;
 canvasPlot.frameOffscreen.floorX = NaN;
 canvasPlot.frameOffscreen.floorY = NaN;

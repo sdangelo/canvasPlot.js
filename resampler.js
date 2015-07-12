@@ -14,15 +14,33 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Prototype for resampler objects operating on uniformly-sampled
+ *** signals. ***/
+
 canvasPlot.resampler = {
-	stepRatio:	NaN,
+	/* Read/write members. */
+	stepRatio:	NaN,	// Input to output timestep ratio
+	offset:		NaN,	// Time offset of first input sample w.r.t.
+				// first output sample (i.e., t_in - t_out)
 
 	init: function () {
 	},
 
+	/* Resets the resampler to its initial state (does not affect
+	 * this.offset). */
 	update: function () {
 	},
 
+	/* Does the resampling.
+	 * Writes at most countOut samples in yOut starting from index firstOut,
+	 * reading at most countIn samples from yIn starting from index firstIn.
+	 * It also sets rw.nextOut to the first output sample index to be
+	 * written by the next call, rw.nextIn to the first input sample index
+	 * that the next call expects to read, and this.offset to the next input
+	 * to output time offset.
+	 * rw.nextOut and rw.nextIn are not necessarily within array index
+	 * bounds and rw.nextIn is not necessarily consecutive to the last input
+	 * sample. */
 	process: function (yIn, yOut, firstIn, firstOut, countIn, countOut,
 			   rw) {
 		rw.nextIn = firstIn;

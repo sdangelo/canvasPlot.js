@@ -14,14 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Simple linear resampler object (without anti-aliasing). ***/
+
 canvasPlot.resamplerLinear = Object.create(canvasPlot.resampler);
 
+/* Private member. */
 canvasPlot.resamplerLinear.prev = NaN;
-canvasPlot.resamplerLinear.offset = NaN;
 
 canvasPlot.resamplerLinear.update = function () {
 	this.prev = NaN;
-	this.offset = 0.0;
 };
 
 canvasPlot.resamplerLinear.process = function (yIn, yOut, firstIn, firstOut,

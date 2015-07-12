@@ -14,11 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Simplified plotting API (one map, one frame, one grid, many curves) ***/
+
 canvasPlot.simplePlot = {
+	/* Read/write members. */
 	map:	null,
-	frame:	null,
-	grid:	null,
-	curves:	null,
+	frame:	null,	// Can be null
+	grid:	null,	// Can bel null
+	curves:	null,	// Array of curve objects, can be null
 
 	init: function (map, frame, grid, curves) {
 		if (frame)
@@ -45,13 +48,13 @@ canvasPlot.simplePlot = {
 		this.curves = curves ? curves : [];
 	},
 
+	/* updateFrameArea tells whether to update the area member of frame. */
 	update: function (updateFrameArea, updateMap) {
 		if (updateFrameArea)
 			this.frame.area.update();
 		if (this.frame)
 			this.frame.update();
-		if (updateMap)
-			this.map.update(this.frame.innerArea);
+		this.map.update(this.frame.innerArea);
 		if (this.grid)
 			this.grid.update(this.map);
 		if (this.curves)
@@ -59,6 +62,7 @@ canvasPlot.simplePlot = {
 				this.curves[i].update(this.map);
 	},
 
+	/* curveDrawer is the curve-drawing object. */
 	draw: function (ctx, curveDrawer) {
 		if (this.grid)
 			this.grid.draw(ctx, this.frame.innerArea);
@@ -70,6 +74,8 @@ canvasPlot.simplePlot = {
 			this.frame.draw(ctx);
 	}
 };
+
+/* The necessary bookkepping. */
 
 canvasPlot.simplePlot.map = Object.create(canvasPlot.map);
 canvasPlot.simplePlot.frame = Object.create(canvasPlot.frame);

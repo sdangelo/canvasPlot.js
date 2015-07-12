@@ -14,14 +14,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-canvasPlot.gridOffscreen = Object.create(canvasPlot.grid);
-canvasPlot.gridOffscreen.super = canvasPlot.grid;
+/*** Offscreen-rendered plot grid object. ***/
 
+canvasPlot.gridOffscreen = Object.create(canvasPlot.grid);
+
+/* Private members. */
+canvasPlot.gridOffscreen.super = canvasPlot.grid;
 canvasPlot.gridOffscreen.canvas = null;
 canvasPlot.gridOffscreen.area = Object.create(canvasPlot.area);
-
-canvasPlot.offsetX = NaN;
-canvasPlot.offsetY = NaN;
+canvasPlot.gridOffscreen.offsetX = NaN;
+canvasPlot.gridOffscreen.offsetY = NaN;
 
 canvasPlot.gridOffscreen.init = function (tics) {
 	this.super.init.call(this, tics);

@@ -14,8 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Linear coordinate-mapping object. ***/
+
 canvasPlot.mapLinear = Object.create(canvasPlot.map);
 
+/* Private members. */
 canvasPlot.mapLinear.kx0 = NaN;
 canvasPlot.mapLinear.kx1 = NaN;
 canvasPlot.mapLinear.ky0 = NaN;

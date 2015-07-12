@@ -14,15 +14,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Circular buffer. ***/
+
 canvasPlot.circularBuffer = {
-	buffer:	null,
-	index:	NaN,
+	/* Read-only members. */
+	buffer:	null,	// Buffer array
+	index:	NaN,	// Index of next element to write
 
 	init: function (buffer) {
 		this.buffer = buffer ? buffer : [];
 		this.index = 0;
 	},
 
+	/* Copies count elements from buffer starting from index first. */
 	write: function (buffer, first, count) {
 		var i = this.index;
 		var j;

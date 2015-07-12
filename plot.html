@@ -6,20 +6,11 @@
   <script src="mapLinear.js" type="text/javascript"></script>
   <script src="curveDrawerLinear.js" type="text/javascript"></script>
   <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="canvasStretch.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var canvas = document.getElementById("canvas");
 	var form = document.getElementById("form");
-
-	var style = window.getComputedStyle(canvas);
-	var leaveWidth = parseFloat(style.getPropertyValue("margin-left"))
-			 + parseFloat(style.getPropertyValue("margin-right"));
-	var leaveHeight = parseFloat(style.getPropertyValue("margin-top"))
-			  + parseFloat(style.getPropertyValue("margin-bottom"));
-	style = window.getComputedStyle(form);
-	leaveHeight += parseFloat(style.getPropertyValue("margin-bottom"));
-	var oldWidth = 0;
-	var oldHeight = 0;
 
 	var p = Object.create(canvasPlot.simplePlot);
 	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
@@ -37,25 +28,12 @@ function init() {
 	}
 
 	function resize() {
-		var r = canvas.parentNode.getBoundingClientRect();
-		if (r.width == oldWidth && r.height == oldHeight)
-			return;
-		oldWidth = r.width;
-		oldHeight = r.height;
-
-		var xHeight = leaveHeight
-			      + parseFloat(style.getPropertyValue("height"));
-
-		canvas.width = r.width - leaveWidth;
-		canvas.height = r.height - xHeight;
-
-		canvas.width = canvas.parentNode.scrollWidth - leaveWidth;
-		canvas.height = canvas.parentNode.scrollHeight - xHeight;
+		canvasPlot.canvasStretch(canvas, null);
 
 		p.frame.area.width = canvas.width;
 		p.frame.area.height = canvas.height;
 
-		p.update(true, true);
+		p.update(false);
 
 		draw();
 	}
@@ -170,7 +148,7 @@ function init() {
 		p.curves[0] = Object.create(canvasPlot.curve);
 		p.curves[0].init(samples, null);
 
-		p.update(false, true);
+		p.update(true);
 
 		draw();
 	}
@@ -182,7 +160,9 @@ window.addEventListener("load", init);
   </script>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="canvas">
+    <canvas id="canvas"></canvas>
+  </div>
   <form id="form">
     <div>
       <span>x axis range</span>

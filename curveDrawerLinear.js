@@ -14,10 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*** Curve-drawing object using lines to connect consecutive samples. ***/
+
 canvasPlot.curveDrawerLinear = Object.create(canvasPlot.curveDrawer);
 
+/* Private members. */
 canvasPlot.curveDrawerLinear.eAngle = Math.PI + Math.PI;
-
 canvasPlot.curveDrawerLinear.ctx = null;
 canvasPlot.curveDrawerLinear.area = null;
 canvasPlot.curveDrawerLinear.pointRadius = NaN;
@@ -72,7 +74,8 @@ canvasPlot.curveDrawerLinear.drawPart = function (mSamples, first, last) {
 			}
 		} else if (this.irPrev) {
 			this.ctx.beginPath();
-			this.ctx.arc(this.xPrev, this.yPrev, this.pointRadius, 0.0, this.eAngle);
+			this.ctx.arc(this.xPrev, this.yPrev, this.pointRadius,
+				     0.0, this.eAngle);
 			this.ctx.fill();
 		}
 
