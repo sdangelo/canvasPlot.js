@@ -14,14 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Simplified plotting API (one map, one frame, one grid, many curves) ***/
+/*** Simplified plotting API (one map, one frame, one grid, many curves). ***/
 
 canvasPlot.simplePlot = {
 	/* Read/write members. */
 	map:	null,
-	frame:	null,	// Can be null
-	grid:	null,	// Can bel null
-	curves:	null,	// Array of curve objects, can be null
+	frame:	null,
+	grid:	null,
+	curves:	null,	// Array of curve objects
 
 	init: function (map, frame, grid, curves) {
 		if (frame)
@@ -49,29 +49,23 @@ canvasPlot.simplePlot = {
 	},
 
 	/* updateFrameArea tells whether to update the area member of frame. */
-	update: function (updateFrameArea, updateMap) {
+	update: function (updateFrameArea) {
 		if (updateFrameArea)
 			this.frame.area.update();
-		if (this.frame)
-			this.frame.update();
+		this.frame.update();
 		this.map.update(this.frame.innerArea);
-		if (this.grid)
-			this.grid.update(this.map);
-		if (this.curves)
-			for (var i = 0; i < this.curves.length; i++)
-				this.curves[i].update(this.map);
+		this.grid.update(this.map);
+		for (var i = 0; i < this.curves.length; i++)
+			this.curves[i].update(this.map);
 	},
 
 	/* curveDrawer is the curve-drawing object. */
 	draw: function (ctx, curveDrawer) {
-		if (this.grid)
-			this.grid.draw(ctx, this.frame.innerArea);
-		if (this.curves)
-			for (var i = 0; i < this.curves.length; i++)
-				this.curves[i].draw(ctx, this.frame.innerArea,
-						    curveDrawer);
-		if (this.frame)
-			this.frame.draw(ctx);
+		this.grid.draw(ctx, this.frame.innerArea);
+		for (var i = 0; i < this.curves.length; i++)
+			this.curves[i].draw(ctx, this.frame.innerArea,
+					    curveDrawer);
+		this.frame.draw(ctx);
 	}
 };
 

@@ -21,18 +21,28 @@ canvasPlot.mapSemiLogX = Object.create(canvasPlot.map);
 /* Private members. */
 canvasPlot.mapSemiLogX.kx0 = NaN;
 canvasPlot.mapSemiLogX.kx1 = NaN;
+canvasPlot.mapSemiLogX.kx2 = NaN;
 canvasPlot.mapSemiLogX.ky0 = NaN;
 canvasPlot.mapSemiLogX.ky1 = NaN;
 
 canvasPlot.mapSemiLogX.update = function (area) {
-	this.kx1 = area.width / Math.log10(this.xRange.max / this.xRange.min);
-	this.kx0 = area.p.x - 0.5;
+	if (this.xRange.max > this.xRange.min) {
+		this.kx0 = area.p.x - 0.5;
+		this.kx1 = area.width
+			   / Math.log10(this.xRange.max / this.xRange.min);
+		this.kx2 = 1 / this.xRange.min;
+	} else {
+		this.kx0 = area.p2.x + 0.5;
+		this.kx1 = -area.width
+			   / Math.log10(this.xRange.min / this.xRange.max);
+		this.kx2 = 1 / this.xRange.max;
+	}
 	this.ky1 = -area.height / (this.yRange.max - this.yRange.min);
 	this.ky0 = area.p2.y - this.ky1 * this.yRange.min - 0.5;
 };
 
 canvasPlot.mapSemiLogX.mapPoint = function (x, y, m) {
-	m.x = this.kx0 + this.kx1 * Math.log10(x / this.xRange.min);
+	m.x = this.kx0 + this.kx1 * Math.log10(this.kx2 * x);
 	m.y = this.ky0 + this.ky1 * y;
 };
 
@@ -41,7 +51,7 @@ canvasPlot.mapSemiLogX.mapPoints = function (x, y, mx, my, xFirst, yFirst,
 	for (var i = 0; i < count; i++) {
 		mx[mxFirst + i] = this.kx0
 				  + this.kx1
-				  * Math.log10(x[xFirst + i] / this.xRange.min);
+				  * Math.log10(this.kx2 * x[xFirst + i]);
 		my[myFirst + i] = this.ky0 + this.ky1 * y[yFirst + i];
 	}
 };

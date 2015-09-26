@@ -1,0 +1,101 @@
+<html>
+<head>
+  <title>canvasPlot.js automatic linear grid example</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="canvasPlot.js" type="text/javascript"></script>
+  <script src="mapLinear.js" type="text/javascript"></script>
+  <script src="simplePlot.js" type="text/javascript"></script>
+  <script src="canvasStretch.js" type="text/javascript"></script>
+  <script src="simplePlotWidget.js" type="text/javascript"></script>
+  <script src="super.js" type="text/javascript"></script>
+  <script src="gridAutoLinear.js" type="text/javascript"></script>
+  <script type="text/javascript">
+function init() {
+	var p = Object.create(canvasPlot.simplePlotWidget);
+	p.init(document.getElementById("canvas"),
+	       Object.create(canvasPlot.mapLinear), null, null, null, null);
+
+	p.plot.grid = Object.create(canvasPlot.gridAutoLinear);
+	p.plot.grid.init(null, p.plot.map.xRange, p.plot.map.yRange);
+
+	function setValElement(name) {
+		var elem = document.getElementById(name);
+		elem.valElement = document.getElementById(name + "_val");
+		if (elem.valElement.innerHTML != elem.value)
+			elem.valElement.innerHTML = elem.value;
+		return elem;
+	}
+	var x1_elem = setValElement("x1");
+	var x2_elem = setValElement("x2");
+	var y1_elem = setValElement("y1");
+	var y2_elem = setValElement("y2");
+
+	p.plot.map.xRange.min = parseFloat(x1.value);
+	p.plot.map.xRange.max = parseFloat(x2.value);
+	p.plot.map.yRange.min = parseFloat(y1.value);
+	p.plot.map.yRange.max = parseFloat(y2.value);
+
+	p.update(false);
+	p.draw();
+
+	function input() {
+		if (this.valElement.innerHTML == this.value)
+			return;
+		this.valElement.innerHTML = this.value;
+
+		switch (this) {
+			case x1_elem:
+				p.plot.map.xRange.min = parseFloat(x1.value);
+				break;
+			case x2_elem:
+				p.plot.map.xRange.max = parseFloat(x2.value);
+				break;
+			case y1_elem:
+				p.plot.map.yRange.min = parseFloat(y1.value);
+				break;
+			case y2_elem:
+				p.plot.map.yRange.max = parseFloat(y2.value);
+				break;
+		}
+
+		p.update(false);
+		p.draw();
+	}
+	x1_elem.addEventListener("input", input);
+	x2_elem.addEventListener("input", input);
+	y1_elem.addEventListener("input", input);
+	y2_elem.addEventListener("input", input);
+}
+
+window.addEventListener("load", init);
+  </script>
+</head>
+<body>
+  <div class="canvas">
+    <canvas id="canvas"></canvas>
+  </div>
+  <form>
+    <div>
+      <label for="x1">x1: </label>
+      <input type="range" id="x1" min="-10" max="10" step="0.01" value="0" />
+      <span id="x1_val">0</span>
+    </div>
+    <div>
+      <label for="x2">x2: </label>
+      <input type="range" id="x2" min="-10" max="10" step="0.01" value="10" />
+      <span id="x2_val">10</span>
+    </div>
+    <div>
+      <label for="y1">y1: </label>
+      <input type="range" id="y1" min="-10" max="10" step="0.01" value="0" />
+      <span id="y1_val">0</span>
+    </div>
+    <div>
+      <label for="y2">y2: </label>
+      <input type="range" id="y2" min="-10" max="10" step="0.01" value="10" />
+      <span id="y2_val">10</span>
+    </div>
+  </form>
+</html>
+  </form>
+</html>

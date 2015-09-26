@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* Circular-array-based resampling API */
+/* Circular-array-based resampling API. */
 
 /* Analogous of canvasPlot.resampler.process() for circular arrays.
  * Writes as many samples as needed to the circular array yOut starting from

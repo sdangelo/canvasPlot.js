@@ -14,8 +14,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Simplified plotting API with offscreen frame and grid rendering. ***/
+/*** Inheritance-related utilities. ***/
 
-canvasPlot.simplePlotOffscreen = Object.create(canvasPlot.simplePlot);
-canvasPlot.simplePlotOffscreen.frame = Object.create(canvasPlot.frameOffscreen);
-canvasPlot.simplePlotOffscreen.grid = Object.create(canvasPlot.gridOffscreen);
+/* Like Function.prototype.apply, but also updates this.super.
+   f is the function to be called, thisArg is the value of this for the call,
+   args is the arguments array-like object.
+   It returns what f returns. */
+canvasPlot.superApply = function (f, thisArg, args) {
+	var oldSuper = thisArg.super;
+	thisArg.super = thisArg.super.super;
+	var ret = f.apply(thisArg, args);
+	thisArg.super = oldSuper;
+	return ret;
+};

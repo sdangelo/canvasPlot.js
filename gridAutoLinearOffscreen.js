@@ -14,8 +14,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Simplified plotting API with offscreen frame and grid rendering. ***/
+/*** Offscreen-rendered automatic grid for linear maps. ***/
 
-canvasPlot.simplePlotOffscreen = Object.create(canvasPlot.simplePlot);
-canvasPlot.simplePlotOffscreen.frame = Object.create(canvasPlot.frameOffscreen);
-canvasPlot.simplePlotOffscreen.grid = Object.create(canvasPlot.gridOffscreen);
+canvasPlot.gridAutoLinearOffscreen = Object.create(canvasPlot.gridAutoLinear);
+
+/* Private members. */
+canvasPlot.gridAutoLinearOffscreen.super = canvasPlot.gridAutoLinear;
+canvasPlot.gridAutoLinearOffscreen.canvas = null;
+canvasPlot.gridAutoLinearOffscreen.area = Object.create(canvasPlot.area);
+canvasPlot.gridAutoLinearOffscreen.offsetX = NaN;
+canvasPlot.gridAutoLinearOffscreen.offsetY = NaN;
+
+canvasPlot.gridAutoLinearOffscreen.init = canvasPlot.gridOffscreen.init;
+canvasPlot.gridAutoLinearOffscreen.update = canvasPlot.gridOffscreen.update;
+canvasPlot.gridAutoLinearOffscreen.draw = canvasPlot.gridOffscreen.draw;

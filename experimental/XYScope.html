@@ -1,17 +1,18 @@
 <html>
 <head>
   <title>canvasPlot.js XY oscilloscope example</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
-  <script src="canvasPlot.js" type="text/javascript"></script>
-  <script src="mapLinear.js" type="text/javascript"></script>
-  <script src="curveDrawerLinear.js" type="text/javascript"></script>
+  <link rel="stylesheet" type="text/css" href="../style.css">
+  <script src="../canvasPlot.js" type="text/javascript"></script>
+  <script src="../mapLinear.js" type="text/javascript"></script>
+  <script src="../curveDrawerLinear.js" type="text/javascript"></script>
   <script src="curveCircular.js" type="text/javascript"></script>
   <script src="circularBuffer.js" type="text/javascript"></script>
-  <script src="simplePlot.js" type="text/javascript"></script>
-  <script src="frameOffscreen.js" type="text/javascript"></script>
-  <script src="gridOffscreen.js" type="text/javascript"></script>
-  <script src="simplePlotOffscreen.js" type="text/javascript"></script>
-  <script src="canvasStretch.js" type="text/javascript"></script>
+  <script src="../simplePlot.js" type="text/javascript"></script>
+  <script src="../super.js" type="text/javascript"></script>
+  <script src="../frameOffscreen.js" type="text/javascript"></script>
+  <script src="../gridOffscreen.js" type="text/javascript"></script>
+  <script src="../simplePlotOffscreen.js" type="text/javascript"></script>
+  <script src="../canvasStretch.js" type="text/javascript"></script>
   <script src="resampler.js" type="text/javascript"></script>
   <script src="resamplerCircular.js" type="text/javascript"></script>
   <script src="resamplerLinear.js" type="text/javascript"></script>
@@ -38,7 +39,6 @@ function init() {
 	gainOut.connect(audioCtx.destination);
 
 	var canvas = document.getElementById("canvas");
-	var form = document.getElementById("form");
 
 	var p = Object.create(canvasPlot.simplePlotOffscreen);
 	p.init(Object.create(canvasPlot.mapLinear), null, null, null);
@@ -51,22 +51,22 @@ function init() {
 	p.map.yRange.min = -1.0;
 	p.map.yRange.max = 1.0;
 
-	p.grid.tics = Array(18);
-	var xtic = Object.create(canvasPlot.tic);
-	xtic.direction = canvasPlot.direction.vertical;
-	var ytic = Object.create(canvasPlot.tic);
-	ytic.direction = canvasPlot.direction.horizontal;
+	p.grid.lines = Array(18);
+	var xline = Object.create(canvasPlot.gridLine);
+	xline.direction = canvasPlot.direction.vertical;
+	var yline = Object.create(canvasPlot.gridLine);
+	yline.direction = canvasPlot.direction.horizontal;
 
 	var i = 0;
 	for (var v = -0.8; v < 1.0; i++, v += 0.2) {
-		p.grid.tics[i] = Object.create(xtic);
-		p.grid.tics[i].init();
-		p.grid.tics[i].value = v;
+		p.grid.lines[i] = Object.create(xline);
+		p.grid.lines[i].init();
+		p.grid.lines[i].value = v;
 	}
 	for (var v = -0.8; v < 1.0; i++, v += 0.2) {
-		p.grid.tics[i] = Object.create(ytic);
-		p.grid.tics[i].init();
-		p.grid.tics[i].value = v;
+		p.grid.lines[i] = Object.create(yline);
+		p.grid.lines[i].init();
+		p.grid.lines[i].value = v;
 	}
 
 	var maxPersistence = 1;
@@ -315,7 +315,7 @@ window.addEventListener("load", init);
   <div class="canvas">
     <canvas id="canvas"></canvas>
   </div>
-  <form id="form">
+  <form>
     <div>
       <span>waveform</span>
       <label>x:</label>

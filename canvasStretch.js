@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Canvas auto-resize utility ***/
+/*** Canvas auto-resize utility. ***/
 
 /* Stretches a canvas element to the available size of its parent, within the
  * limits of a given width to height ratio, if specified. */

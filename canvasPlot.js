@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Core API ***/
+/*** Core API. ***/
 
 var canvasPlot = {
 
-	/* Basic self-explaining definitions */
+	/* Basic self-explaining definitions. */
 
 	direction: {
 		horizontal:	1,
@@ -40,7 +40,8 @@ var canvasPlot = {
 	 * Here we use prototype inheritance heavily. If you are not familiar
 	 * with it, go study it first before using this library.
 	 *
-	 * From the outside, object members can be read/write or read-only.
+	 * From the outside, object members can be read/write, read-only or
+	 * private.
 	 *
 	 * init() functions are meant to create the members of an object, but
 	 * not to initialize it. They often accept parameters for the user to
@@ -199,8 +200,8 @@ var canvasPlot = {
 		}
 	},
 
-	/* Grid tic. */
-	tic: {
+	/* Grid line. */
+	gridLine: {
 		/* Read/write members. */
 		value:		NaN,	// Non-mapped value
 		direction:	NaN,	
@@ -220,8 +221,16 @@ var canvasPlot = {
 		/* map is the coordinate-mapping object. */
 		update: function (map) {
 			if (this.direction == 1 /* direction.horizontal */) {
-				if (this.value >= map.yRange.min
-				    && this.value <= map.yRange.max) {
+				var min;
+				var max;
+				if (map.yRange.max > map.yRange.min) {
+					min = map.yRange.min;
+					max = map.yRange.max;
+				} else {
+					min = map.yRange.max;
+					max = map.yRange.min;
+				}
+				if (this.value >= min && this.value <= max) {
 					map.mapPoint(map.xRange.min, this.value,
 						     this.p1);
 					map.mapPoint(map.xRange.max, this.value,
@@ -231,8 +240,16 @@ var canvasPlot = {
 					this.toDraw = false;
 			} else if (this.direction == 2 /* direction.vertical */)
 			{
-				if (this.value >= map.xRange.min
-				    && this.value <= map.xRange.max) {
+				var min;
+				var max;
+				if (map.xRange.max > map.xRange.min) {
+					min = map.xRange.min;
+					max = map.xRange.max;
+				} else {
+					min = map.xRange.max;
+					max = map.xRange.min;
+				}
+				if (this.value >= min && this.value <= max) {
 					map.mapPoint(this.value, map.yRange.min,
 						     this.p1);
 					map.mapPoint(this.value, map.yRange.max,
@@ -270,23 +287,23 @@ var canvasPlot = {
 
 	/* Plot grid. */
 	grid: {
-		/* Read/write array of tics that make the grid. */
-		tics:	null,
+		/* Read/write array of lines that make the grid. */
+		lines:	null,
 
-		init: function (tics) {
-			this.tics = tics ? tics : [];
+		init: function (lines) {
+			this.lines = lines ? lines : [];
 		},
 
 		/* map is the coordinate-mapping object. */
 		update: function (map) {
-			for (var i = 0; i < this.tics.length; i++)
-				this.tics[i].update(map);
+			for (var i = 0; i < this.lines.length; i++)
+				this.lines[i].update(map);
 		},
 
 		/* area is the drawing area. */
 		draw: function (ctx, area) {
-			for (var i = 0; i < this.tics.length; i++)
-				this.tics[i].draw(ctx, area);
+			for (var i = 0; i < this.lines.length; i++)
+				this.lines[i].draw(ctx, area);
 		},
 	},
 
@@ -391,8 +408,8 @@ canvasPlot.map.xRange = Object.create(canvasPlot.range);
 canvasPlot.map.yRange = Object.create(canvasPlot.range);
 canvasPlot.map.tmpPoint = Object.create(canvasPlot.point);
 
-canvasPlot.tic.p1 = Object.create(canvasPlot.point);
-canvasPlot.tic.p2 = Object.create(canvasPlot.point);
+canvasPlot.gridLine.p1 = Object.create(canvasPlot.point);
+canvasPlot.gridLine.p2 = Object.create(canvasPlot.point);
 
 canvasPlot.frame.area = Object.create(canvasPlot.area);
 canvasPlot.frame.strokeArea = Object.create(canvasPlot.area);

@@ -14,8 +14,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Simplified plotting API with offscreen frame and grid rendering. ***/
+/*** Offscreen-rendered automatic grid for semilogx maps. ***/
 
-canvasPlot.simplePlotOffscreen = Object.create(canvasPlot.simplePlot);
-canvasPlot.simplePlotOffscreen.frame = Object.create(canvasPlot.frameOffscreen);
-canvasPlot.simplePlotOffscreen.grid = Object.create(canvasPlot.gridOffscreen);
+canvasPlot.gridAutoSemiLogXOffscreen =
+	Object.create(canvasPlot.gridAutoSemiLogX);
+
+/* Private members. */
+canvasPlot.gridAutoSemiLogXOffscreen.super = canvasPlot.gridAutoSemiLogX;
+canvasPlot.gridAutoSemiLogXOffscreen.canvas = null;
+canvasPlot.gridAutoSemiLogXOffscreen.area = Object.create(canvasPlot.area);
+canvasPlot.gridAutoSemiLogXOffscreen.offsetX = NaN;
+canvasPlot.gridAutoSemiLogXOffscreen.offsetY = NaN;
+
+canvasPlot.gridAutoSemiLogXOffscreen.init = canvasPlot.gridOffscreen.init;
+canvasPlot.gridAutoSemiLogXOffscreen.update = canvasPlot.gridOffscreen.update;
+canvasPlot.gridAutoSemiLogXOffscreen.draw = canvasPlot.gridOffscreen.draw;

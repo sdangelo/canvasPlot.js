@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Circular-array-based curve-drawing API ***/
+/*** Circular-array-based curve-drawing API. ***/
 
 /* Analogous of canvasPlot.curveDrawer.drawPart() for circular sample arrays
  * (curves' mSamples).

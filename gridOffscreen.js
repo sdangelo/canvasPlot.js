@@ -25,17 +25,17 @@ canvasPlot.gridOffscreen.area = Object.create(canvasPlot.area);
 canvasPlot.gridOffscreen.offsetX = NaN;
 canvasPlot.gridOffscreen.offsetY = NaN;
 
-canvasPlot.gridOffscreen.init = function (tics) {
-	this.super.init.call(this, tics);
+canvasPlot.gridOffscreen.init = function (lines) {
+	canvasPlot.superApply(this.super.init, this, arguments);
 	this.canvas = document.createElement("canvas");
 	this.area = Object.create(this.area);
 	this.area.init(null);
 };
 
 canvasPlot.gridOffscreen.update = function (map) {
-	this.super.update.call(this, map);
+	canvasPlot.superApply(this.super.update, this, arguments);
 
-	if (this.tics.length == 0)
+	if (this.lines.length == 0)
 		return;
 
 	var minX = Infinity;
@@ -43,27 +43,27 @@ canvasPlot.gridOffscreen.update = function (map) {
 	var maxX = -Infinity;
 	var maxY = -Infinity;
 	var maxLineWidth = 0;
-	for (var i = 0; i < this.tics.length; i++) {
-		if (!this.tics[i].toDraw)
+	for (var i = 0; i < this.lines.length; i++) {
+		if (!this.lines[i].toDraw)
 			continue;
-		if (this.tics[i].p1.x < minX)
-			minX = this.tics[i].p1.x;
-		if (this.tics[i].p1.x > maxX)
-			maxX = this.tics[i].p1.x;
-		if (this.tics[i].p1.y < minY)
-			minY = this.tics[i].p1.y;
-		if (this.tics[i].p1.y > maxY)
-			maxY = this.tics[i].p1.y;
-		if (this.tics[i].p2.x < minX)
-			minX = this.tics[i].p2.x;
-		if (this.tics[i].p2.x > maxX)
-			maxX = this.tics[i].p2.x;
-		if (this.tics[i].p2.y < minY)
-			minY = this.tics[i].p2.y;
-		if (this.tics[i].p2.y > maxY)
-			maxY = this.tics[i].p2.y;
-		if (this.tics[i].lineWidth > maxLineWidth)
-			maxLineWidth = this.tics[i].lineWidth;
+		if (this.lines[i].p1.x < minX)
+			minX = this.lines[i].p1.x;
+		if (this.lines[i].p1.x > maxX)
+			maxX = this.lines[i].p1.x;
+		if (this.lines[i].p1.y < minY)
+			minY = this.lines[i].p1.y;
+		if (this.lines[i].p1.y > maxY)
+			maxY = this.lines[i].p1.y;
+		if (this.lines[i].p2.x < minX)
+			minX = this.lines[i].p2.x;
+		if (this.lines[i].p2.x > maxX)
+			maxX = this.lines[i].p2.x;
+		if (this.lines[i].p2.y < minY)
+			minY = this.lines[i].p2.y;
+		if (this.lines[i].p2.y > maxY)
+			maxY = this.lines[i].p2.y;
+		if (this.lines[i].lineWidth > maxLineWidth)
+			maxLineWidth = this.lines[i].lineWidth;
 	}
 	minX -= maxLineWidth;
 	minY -= maxLineWidth;
@@ -83,26 +83,26 @@ canvasPlot.gridOffscreen.update = function (map) {
 	this.canvas.height = Math.ceil(this.area.p2.y);
 	var ctx = this.canvas.getContext("2d");
 
-	for (var i = 0; i < this.tics.length; i++) {
-		if (!this.tics[i].toDraw)
+	for (var i = 0; i < this.lines.length; i++) {
+		if (!this.lines[i].toDraw)
 			continue;
 
-		var oldX1 = this.tics[i].p1.x;
-		var oldY1 = this.tics[i].p1.y;
-		var oldX2 = this.tics[i].p2.x;
-		var oldY2 = this.tics[i].p2.y;
+		var oldX1 = this.lines[i].p1.x;
+		var oldY1 = this.lines[i].p1.y;
+		var oldX2 = this.lines[i].p2.x;
+		var oldY2 = this.lines[i].p2.y;
 
-		this.tics[i].p1.x -= this.offsetX;
-		this.tics[i].p1.y -= this.offsetY;
-		this.tics[i].p2.x -= this.offsetX;
-		this.tics[i].p2.y -= this.offsetY;
+		this.lines[i].p1.x -= this.offsetX;
+		this.lines[i].p1.y -= this.offsetY;
+		this.lines[i].p2.x -= this.offsetX;
+		this.lines[i].p2.y -= this.offsetY;
 
-		this.tics[i].draw(ctx, this.area);
+		this.lines[i].draw(ctx, this.area);
 
-		this.tics[i].p1.x = oldX1;
-		this.tics[i].p1.y = oldY1;
-		this.tics[i].p2.x = oldX2;
-		this.tics[i].p2.y = oldY2;
+		this.lines[i].p1.x = oldX1;
+		this.lines[i].p1.y = oldY1;
+		this.lines[i].p2.x = oldX2;
+		this.lines[i].p2.y = oldY2;
 	}
 };
 

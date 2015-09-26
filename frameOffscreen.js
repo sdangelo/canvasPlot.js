@@ -27,12 +27,12 @@ canvasPlot.frameOffscreen.offsetX = NaN;
 canvasPlot.frameOffscreen.offsetY = NaN;
 
 canvasPlot.frameOffscreen.init = function (area) {
-	this.super.init.call(this, area);
+	canvasPlot.superApply(this.super.init, this, arguments);
 	this.canvas = document.createElement("canvas");
 };
 
 canvasPlot.frameOffscreen.update = function () {
-	this.super.update.call(this);
+	canvasPlot.superApply(this.super.update, this, arguments);
 
 	this.floorX = Math.floor(this.area.p.x);
 	this.floorY = Math.floor(this.area.p.y);

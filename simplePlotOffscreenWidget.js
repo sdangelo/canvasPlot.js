@@ -14,8 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*** Simplified plotting API with offscreen frame and grid rendering. ***/
+/*** Widget-style object for the simplified plotting API with offscreen frame
+ *** and grid rendering. ***/
 
-canvasPlot.simplePlotOffscreen = Object.create(canvasPlot.simplePlot);
-canvasPlot.simplePlotOffscreen.frame = Object.create(canvasPlot.frameOffscreen);
-canvasPlot.simplePlotOffscreen.grid = Object.create(canvasPlot.gridOffscreen);
+canvasPlot.simplePlotOffscreenWidget =
+	Object.create(canvasPlot.simplePlotWidget);
+canvasPlot.simplePlotOffscreenWidget.plot =
+	Object.create(canvasPlot.simplePlotOffscreen);
