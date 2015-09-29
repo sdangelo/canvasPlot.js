@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title>canvasPlot.js automatic linear grid example</title>
+  <title>canvasPlot.js automatic fixed grid with equispaced lines and linear map example</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="canvasPlot.js" type="text/javascript"></script>
   <script src="mapLinear.js" type="text/javascript"></script>
@@ -8,14 +8,14 @@
   <script src="canvasStretch.js" type="text/javascript"></script>
   <script src="simplePlotWidget.js" type="text/javascript"></script>
   <script src="super.js" type="text/javascript"></script>
-  <script src="gridAutoLinear.js" type="text/javascript"></script>
+  <script src="gridAutoFixedLinearEquispaced.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var p = Object.create(canvasPlot.simplePlotWidget);
 	p.init(document.getElementById("canvas"),
 	       Object.create(canvasPlot.mapLinear), null, null, null, null);
 
-	p.plot.grid = Object.create(canvasPlot.gridAutoLinear);
+	p.plot.grid = Object.create(canvasPlot.gridAutoFixedLinearEquispaced);
 	p.plot.grid.init(null, p.plot.map.xRange, p.plot.map.yRange);
 
 	function setValElement(name) {
@@ -29,11 +29,15 @@ function init() {
 	var x2_elem = setValElement("x2");
 	var y1_elem = setValElement("y1");
 	var y2_elem = setValElement("y2");
+	var xLines_elem = setValElement("xLines");
+	var yLines_elem = setValElement("yLines");
 
 	p.plot.map.xRange.min = parseFloat(x1_elem.value);
 	p.plot.map.xRange.max = parseFloat(x2_elem.value);
 	p.plot.map.yRange.min = parseFloat(y1_elem.value);
 	p.plot.map.yRange.max = parseFloat(y2_elem.value);
+	p.plot.grid.xLines = parseInt(xLines_elem.value);
+	p.plot.grid.yLines = parseInt(yLines_elem.value);
 
 	p.update(false);
 	p.draw();
@@ -56,6 +60,12 @@ function init() {
 			case y2_elem:
 				p.plot.map.yRange.max = parseFloat(this.value);
 				break;
+			case xLines_elem:
+				p.plot.grid.xLines = parseInt(this.value);
+				break;
+			case yLines_elem:
+				p.plot.grid.yLines = parseInt(this.value);
+				break;
 		}
 
 		p.update(false);
@@ -64,6 +74,9 @@ function init() {
 	x1_elem.addEventListener("input", input);
 	x2_elem.addEventListener("input", input);
 	y1_elem.addEventListener("input", input);
+	y2_elem.addEventListener("input", input);
+	xLines_elem.addEventListener("input", input);
+	yLines_elem.addEventListener("input", input);
 	y2_elem.addEventListener("input", input);
 }
 
@@ -94,6 +107,16 @@ window.addEventListener("load", init);
       <label for="y2">y2: </label>
       <input type="range" id="y2" min="-10" max="10" step="0.01" value="10" />
       <span id="y2_val">10</span>
+    </div>
+    <div>
+      <label for="xLines">x lines: </label>
+      <input type="range" id="xLines" min="0" max="9" step="1" value="9" />
+      <span id="xLines_val">10</span>
+    </div>
+    <div>
+      <label for="yLines">y lines: </label>
+      <input type="range" id="yLines" min="0" max="9" step="1" value="9" />
+      <span id="yLines_val">10</span>
     </div>
   </form>
 </html>

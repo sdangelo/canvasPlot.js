@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title>canvasPlot.js spectrum analyzer example</title>
+  <title>canvasPlot.js oscilloscope example</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="canvasPlot.js" type="text/javascript"></script>
   <script src="mapLinear.js" type="text/javascript"></script>
@@ -10,16 +10,15 @@
   <script src="super.js" type="text/javascript"></script>
   <script src="frameOffscreen.js" type="text/javascript"></script>
   <script src="gridOffscreen.js" type="text/javascript"></script>
-  <script src="gridAutoLinear.js" type="text/javascript"></script>
-  <script src="gridAutoSemiLogX.js" type="text/javascript"></script>
-  <script src="gridAutoLinearOffscreen.js" type="text/javascript"></script>
-  <script src="gridAutoSemiLogXOffscreen.js" type="text/javascript"></script>
+  <script src="gridAutoFixedLinearEquispaced.js" type="text/javascript"></script>
+  <script src="gridAutoFixedLinearEquispacedOffscreen.js" type="text/javascript"></script>
   <script src="simplePlotOffscreen.js" type="text/javascript"></script>
   <script src="canvasStretch.js" type="text/javascript"></script>
-  <script src="spectrumAnalyserSignal.js" type="text/javascript"></script>
-  <script src="simpleSpectrumAnalyser.js" type="text/javascript"></script>
-  <script src="simpleSpectrumAnalyserWidget.js" type="text/javascript"></script>
-  <script src="interpolateLinear.js" type="text/javascript"></script>
+  <script src="scopeSignal.js" type="text/javascript"></script>
+  <script src="simpleScope.js" type="text/javascript"></script>
+  <script src="simpleScopeWidget.js" type="text/javascript"></script>
+  <script src="resampler.js" type="text/javascript"></script>
+  <script src="resamplerLinear.js" type="text/javascript"></script>
   <script type="text/javascript">
 function init() {
 	var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -37,15 +36,17 @@ function init() {
 	var canvas = document.getElementById("canvas");
 
 	var samples = Object.create(canvasPlot.samples);
-	samples.init(new Float32Array(16384), new Float32Array(16384));
+	samples.init(new Float32Array(32768), new Float32Array(32768));
 
-	var signal = Object.create(canvasPlot.spectrumAnalyserSignal);
+	var signal = Object.create(canvasPlot.scopeSignal);
 	signal.init(samples, null);
 	signal.analyser = analyser;
-	signal.updateAnalyser();
 
-	var sa = Object.create(canvasPlot.simpleSpectrumAnalyserWidget);
-	sa.init(canvas, null, [signal], null, null,
+	var resampler = Object.create(canvasPlot.resamplerLinear);
+	resampler.init();
+
+	var scope = Object.create(canvasPlot.simpleScopeWidget);
+	scope.init(canvas, null, [signal], null,
 		Object.create(canvasPlot.curveDrawerLinear));
 
 	function setValElement(name) {
@@ -56,61 +57,65 @@ function init() {
 		return elem;
 	}
 	var frequency_elem = setValElement("frequency");
-	var x1_elem = setValElement("x1");
-	var x2_elem = setValElement("x2");
+	var time_elem = setValElement("time");
 	var y1_elem = setValElement("y1");
 	var y2_elem = setValElement("y2");
+	var triggerLevel_elem = setValElement("triggerLevel");
 	var points_elem = setValElement("points");
 	var volume_in_elem = setValElement("volume_in");
 	var volume_out_elem = setValElement("volume_out");
 
+	var fftSize = Math.ceil(Math.log2(0.001 * time_elem.max
+					  * audioCtx.sampleRate));
+	if (fftSize < 5)
+		fftSize = 5;
+	else if (fftSize > 15)
+		fftSize = 15;
+	analyser.fftSize = 1 << fftSize;
+	signal.updateAnalyser();
+
 	osc.frequency.value = parseFloat(frequency_elem.value);
-	sa.spectrumAnalyser.xRange.min = parseFloat(x1_elem.value);
-	sa.spectrumAnalyser.xRange.max = parseFloat(x2_elem.value);
-	sa.spectrumAnalyser.yRange.min = parseFloat(y1_elem.value);
-	sa.spectrumAnalyser.yRange.max = parseFloat(y2_elem.value);
-	sa.spectrumAnalyser.points = parseInt(points_elem.value);
+	scope.scope.time = parseFloat(time_elem.value) * 0.001;
+	scope.scope.yRange.min = parseFloat(y1_elem.value);
+	scope.scope.yRange.max = parseFloat(y2_elem.value);
+	signal.triggerLevel = parseFloat(triggerLevel_elem.value);
+	scope.scope.resamplerPoints = parseInt(points_elem.value);
 	gainIn.gain.value = parseFloat(volume_in_elem.value) * 0.01;
 	gainOut.gain.value = parseFloat(volume_out_elem.value) * 0.01;
 
-	function xaxis_change () {
-		sa.spectrumAnalyser.linearMap = this.value == "linear";
-		sa.update(false);
-	}
-	var xaxis_elems = document.getElementsByName("xaxis");
-	for (var i = 0; i < xaxis_elems.length; i++) {
-		xaxis_elems[i].addEventListener("change", xaxis_change);
-		if (xaxis_elems[i].checked)
-			sa.spectrumAnalyser.linearMap =
-				xaxis_elems[i].value == "linear";
-	}
-
 	function grid_change () {
-		sa.spectrumAnalyser.showGrid = this.value == "visible";
-		sa.update(false);
+		scope.scope.showGrid = this.value == "visible";
+		scope.update(false);
 	}
 	var grid_elems = document.getElementsByName("grid");
 	for (var i = 0; i < grid_elems.length; i++) {
 		grid_elems[i].addEventListener("change", grid_change);
 		if (grid_elems[i].checked)
-			sa.spectrumAnalyser.showGrid =
-				grid_elems[i].value == "visible";
+			scope.scope.showGrid = grid_elems[i].value == "visible";
 	}
 
-	function interpolation_change () {
-		sa.spectrumAnalyser.interpolate =
-			this.value == "linear" ? canvasPlot.interpolateLinear
-					       : null;
-		sa.update(false);
+	function trigger_change () {
+		signal.trigger = canvasPlot.scopeSignal.triggerType[this.value];
 	}
-	var interpolation_elems = document.getElementsByName("interpolation");
-	for (var i = 0; i < interpolation_elems.length; i++) {
-		interpolation_elems[i].addEventListener("change",
-							interpolation_change);
-		if (interpolation_elems[i].checked)
-			sa.spectrumAnalyser.interpolate =
-				interpolation_elems[i].value == "linear"
-				? canvasPlot.interpolateLinear : null;
+	var trigger_elems = document.getElementsByName("trigger");
+	for (var i = 0; i < trigger_elems.length; i++) {
+		trigger_elems[i].addEventListener("change", trigger_change);
+		if (trigger_elems[i].checked)
+			signal.trigger = canvasPlot.scopeSignal
+					 .triggerType[trigger_elems[i].value];
+	}
+
+	function resampler_change () {
+		scope.scope.resampler = this.value == "linear" ? resampler
+							       : null;
+	}
+	var resampler_elems = document.getElementsByName("resampler");
+	for (var i = 0; i < resampler_elems.length; i++) {
+		resampler_elems[i].addEventListener("change", resampler_change);
+		if (resampler_elems[i].checked)
+			scope.scope.resampler =
+				resampler_elems[i].value == "linear" ? resampler
+								     : null;
 	}
 
 	function waveform_change () {
@@ -123,7 +128,7 @@ function init() {
 			osc.type = waveform_elems[i].value;
 	}
 
-	sa.update(false);
+	scope.update(false);
 
 	function input() {
 		if (this.valElement.innerHTML == this.value)
@@ -134,30 +139,25 @@ function init() {
 			case frequency_elem:
 				osc.frequency.value = parseFloat(this.value);
 				break;
-			case x1_elem:
-				sa.spectrumAnalyser.xRange.min =
-					parseFloat(this.value);
-				sa.update(false);
-				break;
-			case x2_elem:
-				sa.spectrumAnalyser.xRange.max =
-					parseFloat(this.value);
-				sa.update(false);
+			case time_elem:
+				scope.scope.time = parseFloat(this.value)
+						   * 0.001;
+				scope.update(false);
 				break;
 			case y1_elem:
-				sa.spectrumAnalyser.yRange.min =
-					parseFloat(this.value);
-				sa.update(false);
+				scope.scope.yRange.min = parseFloat(this.value);
+				scope.update(false);
 				break;
 			case y2_elem:
-				sa.spectrumAnalyser.yRange.max =
-					parseFloat(this.value);
-				sa.update(false);
+				scope.scope.yRange.max = parseFloat(this.value);
+				scope.update(false);
+				break;
+			case triggerLevel_elem:
+				signal.triggerLevel = parseFloat(this.value);
 				break;
 			case points_elem:
-				sa.spectrumAnalyser.points =
+				scope.scope.resamplerPoints =
 					parseInt(this.value);
-				sa.update(false);
 				break;
 			case volume_in_elem:
 				gainIn.gain.value = parseFloat(this.value)
@@ -170,10 +170,10 @@ function init() {
 		}
 	}
 	frequency_elem.addEventListener("input", input);
-	x1_elem.addEventListener("input", input);
-	x2_elem.addEventListener("input", input);
+	time_elem.addEventListener("input", input);
 	y1_elem.addEventListener("input", input);
 	y2_elem.addEventListener("input", input);
+	triggerLevel_elem.addEventListener("input", input);
 	points_elem.addEventListener("input", input);
 	volume_in_elem.addEventListener("input", input);
 	volume_out_elem.addEventListener("input", input);
@@ -184,9 +184,9 @@ function init() {
 
 	function draw() {
 		requestAnimationFrame(draw);
-		sa.updateSignals();
+		scope.updateSignals();
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		sa.draw();
+		scope.draw();
 	}
 	draw();
 }
@@ -200,43 +200,44 @@ window.addEventListener("load", init);
   </div>
   <form>
     <div>
-      <label>x axis: </label>
-      <input type="radio" name="xaxis" value="logarithmic"/ checked> logarithmic
-      <input type="radio" name="xaxis" value="linear"/> linear
-    </div>
-    <div>
       <label>grid: </label>
       <input type="radio" name="grid" value="visible"/ checked> visible
       <input type="radio" name="grid" value="invisible"/> invisible
     </div>
     <div>
-      <label for="x1">x1: </label>
-      <input type="range" id="x1" min="1" max="20000" step="0.1" value="20" />
-      <span id="x1_val">20</span>
-      <span>Hz</span>
-    </div>
-    <div>
-      <label for="x2">x2: </label>
-      <input type="range" id="x2" min="1" max="20000" step="0.1" value="20000" />
-      <span id="x2_val">20000</span>
-      <span>Hz</span>
+      <label for="time">time: </label>
+      <input type="range" id="time" min="0.1" max="100" step="0.1" value="50" />
+      <span id="time_val">50</span>
+      <span>ms</span>
     </div>
     <div>
       <label for="y1">y1: </label>
-      <input type="range" id="y1" min="-200" max="0" step="1" value="-100" />
-      <span id="y1_val">-100</span>
-      <span>dB</span>
+      <input type="range" id="y1" min="-1" max="1" step="0.001" value="-1" />
+      <span id="y1_val">-1</span>
+      <span></span>
     </div>
     <div>
       <label for="y2">y2: </label>
-      <input type="range" id="y2" min="-200" max="0" step="1" value="0" />
-      <span id="y2_val">0</span>
-      <span>dB</span>
+      <input type="range" id="y2" min="-1" max="1" step="0.001" value="1" />
+      <span id="y2_val">1</span>
+      <span></span>
     </div>
     <div>
-      <label>interpolation: </label>
-      <input type="radio" name="interpolation" value="linear"/ checked> linear
-      <input type="radio" name="interpolation" value="off"/> off
+      <label>trigger: </label>
+      <input type="radio" name="trigger" value="off"/ checked> off
+      <input type="radio" name="trigger" value="up"/> up
+      <input type="radio" name="trigger" value="down"/> down
+    </div>
+    <div>
+      <label for="triggerLevel">trigger level: </label>
+      <input type="range" id="triggerLevel" min="-1" max="1" step="0.001" value="0" />
+      <span id="triggerLevel_val">0</span>
+      <span></span>
+    </div>
+    <div>
+      <label>resampler: </label>
+      <input type="radio" name="resampler" value="off"/ checked> off
+      <input type="radio" name="resampler" value="linear"/> linear
     </div>
     <div>
       <label for="points">points: </label>

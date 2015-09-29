@@ -44,10 +44,10 @@ function init() {
 	var y1_elem = setValElement("y1");
 	var y2_elem = setValElement("y2");
 
-	p.plot.map.xRange.min = xMap(parseFloat(x1.value));
-	p.plot.map.xRange.max = xMap(parseFloat(x2.value));
-	p.plot.map.yRange.min = parseFloat(y1.value);
-	p.plot.map.yRange.max = parseFloat(y2.value);
+	p.plot.map.xRange.min = xMap(parseFloat(x1_elem.value));
+	p.plot.map.xRange.max = xMap(parseFloat(x2_elem.value));
+	p.plot.map.yRange.min = parseFloat(y1_elem.value);
+	p.plot.map.yRange.max = parseFloat(y2_elem.value);
 
 	p.update(false);
 	p.draw();

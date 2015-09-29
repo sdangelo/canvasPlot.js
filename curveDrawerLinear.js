@@ -25,9 +25,8 @@ canvasPlot.curveDrawerLinear.area = null;
 canvasPlot.curveDrawerLinear.pointRadius = NaN;
 canvasPlot.curveDrawerLinear.xPrev = NaN;
 canvasPlot.curveDrawerLinear.yPrev = NaN;
-canvasPlot.curveDrawerLinear.exPrev = false;
-canvasPlot.curveDrawerLinear.irPrev = false;
 canvasPlot.curveDrawerLinear.pathBegun = false;
+canvasPlot.curveDrawerLinear.mask = 0;
 
 canvasPlot.curveDrawerLinear.drawBegin = function (ctx, area, lineWidth,
 						   lineStyle, pointRadius) {
@@ -36,9 +35,8 @@ canvasPlot.curveDrawerLinear.drawBegin = function (ctx, area, lineWidth,
 	this.pointRadius = pointRadius;
 	this.xPrev = NaN;
 	this.yPrev = NaN;
-	this.exPrev = false;
-	this.irPrev = false;
 	this.pathBegun = false;
+	this.mask = 0;
 
 	ctx.save();
 
@@ -53,45 +51,59 @@ canvasPlot.curveDrawerLinear.drawBegin = function (ctx, area, lineWidth,
 };
 
 canvasPlot.curveDrawerLinear.drawPart = function (mSamples, first, last) {
+	var xMin = this.area.p.x - 0.5;
+	var xMax = this.area.p2.x + 0.5;
+	var yMin = this.area.p.y - 0.5;
+	var yMax = this.area.p2.y + 0.5;
 	for (var i = first; i <= last; i++) {
 		var x = mSamples.x[i];
 		var y = mSamples.y[i];
-		var ex = isFinite(x) && isFinite(y);
-		var ir = this.area.contains(x, y, 0.5, 0.5, 0.5, 0.5);
+
+		this.mask = (this.mask & 0xf0) >> 4;
+		if (x <= xMax)
+			this.mask |= 0x80;
+		if (x >= xMin)
+			this.mask |= 0x40;
+		if (y <= yMax)
+			this.mask |= 0x20;
+		if (y >= yMin)
+			this.mask |= 0x10; 
 
 		if (this.pathBegun) {
-			if (this.exPrev)
-				this.ctx.lineTo(this.xPrev, this.yPrev);
-			if (!ex || !this.exPrev) {
+			this.ctx.lineTo(this.xPrev, this.yPrev);
+			var maskcc = this.mask & 0xcc;
+			var mask33 = this.mask & 0x33;
+			if (!(this.mask & 0xc0) || !(this.mask & 0x30)
+			    || (maskcc == 0x44) || (maskcc == 0x88)
+			    || (mask33 == 0x11) || (mask33 == 0x22)) {
 				this.ctx.stroke();
 				this.pathBegun = false;
 			}
-		} else if (ex) {
-			if (this.exPrev) {
-				this.ctx.beginPath();
-				this.ctx.moveTo(this.xPrev, this.yPrev);
-				this.pathBegun = true;
-			}
-		} else if (this.irPrev) {
+		} else if (!((this.mask & 0xc0) && (this.mask & 0x30))
+			   && ((this.mask & 0xf) == 0xf)) {
 			this.ctx.beginPath();
 			this.ctx.arc(this.xPrev, this.yPrev, this.pointRadius,
 				     0.0, this.eAngle);
 			this.ctx.fill();
+		} else if (((this.mask & 0x5a) == 0x5a)
+			   || ((this.mask & 0x69) == 0x69)
+			   || ((this.mask & 0x96) == 0x96)
+			   || ((this.mask & 0xa5) == 0xa5)) {
+				this.ctx.beginPath();
+				this.ctx.moveTo(this.xPrev, this.yPrev);
+				this.pathBegun = true;
 		}
 
 		this.xPrev = x;
 		this.yPrev = y;
-		this.exPrev = ex;
-		this.irPrev = ir;
 	}
 };
 
 canvasPlot.curveDrawerLinear.drawEnd = function () {
 	if (this.pathBegun) {
-		if (this.exPrev)
-			this.ctx.lineTo(this.xPrev, this.yPrev);
+		this.ctx.lineTo(this.xPrev, this.yPrev);
 		this.ctx.stroke();
-	} else if (this.irPrev) {
+	} else if ((this.mask & 0xf0) == 0xf0) {
 		this.ctx.beginPath();
 		this.ctx.arc(this.xPrev, this.yPrev, this.pointRadius, 0.0,
 			     this.eAngle);
