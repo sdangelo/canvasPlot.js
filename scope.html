@@ -182,11 +182,22 @@ function init() {
 
 	var ctx = canvas.getContext("2d");
 
+	var lastTime;
+	var fps = 0;
 	function draw() {
 		requestAnimationFrame(draw);
 		scope.updateSignals();
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		scope.draw();
+
+		var curTime = Date.now();
+		if (lastTime) {
+			fps = 0.1 * 1000 / (curTime - lastTime) + 0.9 * fps;
+			ctx.fillStyle = "black";
+			ctx.font = "16px sans";
+			ctx.fillText("FPS: " + fps.toFixed(2), 10, 26);
+		}
+		lastTime = curTime;
 	}
 	draw();
 }
