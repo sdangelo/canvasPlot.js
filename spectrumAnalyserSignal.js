@@ -50,7 +50,7 @@ canvasPlot.spectrumAnalyserSignal.updateAnalyser = function () {
 		bins = 0;
 		fs = 0;
 	}
-	if (bins != canvasPlot.spectrumAnalyserSignal.bins) {
+	if (bins != this.bins) {
 		var step = 0.5 * fs / bins;
 		for (var i = 0; i < bins; i++)
 			this.dataX[i] = step * i;
