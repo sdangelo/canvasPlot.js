@@ -47,7 +47,10 @@ canvasPlot.scopeSignal.init = function (samples, mSamples) {
 };
 
 canvasPlot.scopeSignal.updateAnalyser = function () {
-	this.samplePeriod = 1 / this.analyser.context.sampleRate;
+	if (this.analyser)
+		this.samplePeriod = 1 / this.analyser.context.sampleRate;
+	else
+		this.samplePeriod = NaN;
 };
 
 canvasPlot.scopeSignal.updateSamples = function (time, resampler, points) {
