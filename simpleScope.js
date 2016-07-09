@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015, 2016 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -67,7 +67,8 @@ canvasPlot.simpleScope = {
 	update: function (updateFrameArea) {
 		this.plot.grid = this.showGrid ? this.gridFixed : this.gridNull;
 
-		this.xRange.max = this.time;
+		if (isFinite(this.time))
+			this.xRange.max = this.time;
 
 		this.plot.curves = this.signals;
 		this.plot.update(updateFrameArea);

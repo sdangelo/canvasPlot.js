@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015, 2016 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,7 +35,7 @@ canvasPlot.gridOffscreen.init = function (lines) {
 canvasPlot.gridOffscreen.update = function (map) {
 	canvasPlot.superApply(this.super.update, this, arguments);
 
-	if (this.lines.length == 0)
+	if (!this.toDraw)
 		return;
 
 	var minX = Infinity;
@@ -107,6 +107,9 @@ canvasPlot.gridOffscreen.update = function (map) {
 };
 
 canvasPlot.gridOffscreen.draw = function (ctx, area) {
+	if (!this.toDraw)
+		return;
+
 	ctx.save();
 
 	ctx.beginPath();

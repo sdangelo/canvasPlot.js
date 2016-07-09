@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015, 2016 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -209,7 +209,7 @@ var canvasPlot = {
 		lineStyle:	"#ccc",	// Drawing context strokeStyle
 
 		/* Read-only members. */
-		toDraw:		false,	// Whether the value is in range
+		toDraw:		false,	// Whether the line has to be drawn
 		p1:		null,	// Start drawing point
 		p2:		null,	// End drawing point
 
@@ -220,7 +220,10 @@ var canvasPlot = {
 
 		/* map is the coordinate-mapping object. */
 		update: function (map) {
-			if (this.direction == 1 /* direction.horizontal */) {
+			if (map.xRange.min == map.xRange.max
+			    || map.yRange.min == map.yRange.max) {
+				this.toDraw = false;
+			} else if (this.direction == 1) // direction.horizontal
 				var min;
 				var max;
 				if (map.yRange.max > map.yRange.min) {
@@ -238,7 +241,7 @@ var canvasPlot = {
 					this.toDraw = true;
 				} else
 					this.toDraw = false;
-			} else if (this.direction == 2 /* direction.vertical */)
+			} else if (this.direction == 2) // direction.vertical
 			{
 				var min;
 				var max;
@@ -290,20 +293,28 @@ var canvasPlot = {
 		/* Read/write array of lines that make the grid. */
 		lines:	null,
 
+		/* Read-only members. */
+		toDraw:	false,	// Whether there is any line to draw
+
 		init: function (lines) {
 			this.lines = lines ? lines : [];
 		},
 
 		/* map is the coordinate-mapping object. */
 		update: function (map) {
-			for (var i = 0; i < this.lines.length; i++)
+			this.toDraw = false;
+			for (var i = 0; i < this.lines.length; i++) {
 				this.lines[i].update(map);
+				this.toDraw = this.toDraw
+					      || this.lines[i].toDraw;
+			}
 		},
 
 		/* area is the drawing area. */
 		draw: function (ctx, area) {
-			for (var i = 0; i < this.lines.length; i++)
-				this.lines[i].draw(ctx, area);
+			if (this.toDraw)
+				for (var i = 0; i < this.lines.length; i++)
+					this.lines[i].draw(ctx, area);
 		},
 	},
 
