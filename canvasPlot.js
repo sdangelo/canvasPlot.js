@@ -224,6 +224,7 @@ var canvasPlot = {
 			    || map.yRange.min == map.yRange.max) {
 				this.toDraw = false;
 			} else if (this.direction == 1) // direction.horizontal
+			{
 				var min;
 				var max;
 				if (map.yRange.max > map.yRange.min) {
