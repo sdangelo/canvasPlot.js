@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015, 2026 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -115,7 +115,7 @@ canvasPlot.gridAutoSemiLogX.update = function (map) {
 		max = this.yRange.min;
 	}
 	var yStep = 0.1 * (max - min);
-	order = Math.pow(10, Math.ceil(Math.log10(max - min)) - 1);
+	var order = Math.pow(10, Math.ceil(Math.log10(max - min)) - 1);
 	yStep = Math.ceil(yStep / order) * order;
 
 	v = yStep * (Math.floor(min / yStep) + 1);
