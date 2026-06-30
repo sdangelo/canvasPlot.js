@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stefano D'Angelo <zanga.mail@gmail.com>
+ * Copyright (C) 2015, 2026 Stefano D'Angelo <zanga.mail@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,9 +26,9 @@ canvasPlot.mapLinear.ky1 = NaN;
 
 canvasPlot.mapLinear.update = function (area) {
 	this.kx1 = area.width / (this.xRange.max - this.xRange.min);
-	this.kx0 = area.p.x - this.kx1 * this.xRange.min - 0.5;
+	this.kx0 = area.p.x - this.kx1 * this.xRange.min;
 	this.ky1 = -area.height / (this.yRange.max - this.yRange.min);
-	this.ky0 = area.p2.y - this.ky1 * this.yRange.min - 0.5;
+	this.ky0 = area.p2.y - this.ky1 * this.yRange.min;
 };
 
 canvasPlot.mapLinear.mapPoint = function (x, y, m) {
