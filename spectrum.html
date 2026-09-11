@@ -202,7 +202,9 @@ function init() {
 	draw();
 }
 
-window.addEventListener("load", init);
+window.addEventListener("load", function () {
+	document.getElementById("start").addEventListener("click", init);
+});
   </script>
 </head>
 <body>
@@ -279,6 +281,7 @@ window.addEventListener("load", init);
       <input type="range" id="volume_out" min="0" max="100" step="1" value="0" />
       <span id="volume_out_val">0</span>
       <span>%</span>
+      <button type="button" id="start">Start</button>
     </div>
   </form>
 </body>
